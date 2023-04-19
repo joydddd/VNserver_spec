@@ -1,0 +1,12 @@
+SPEC2017/
+*.tgz
+*.tar.*
+PinPoints/
+end_to_end_trace/
+looppoint/
+log/
+pin/
+pinplay-tools/
+sde-external**/
+SimPoint**/
+spec_bin/
