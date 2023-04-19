@@ -39,5 +39,5 @@ slice size of 1b
 |   625.x264_s.2        |   running     |
 |   631.deepsjeng_s     |   finish      |   finish      |     finish    |   restarted using `--reuse-profile`   |
 |   648.exchange2_s     |   finish      |   running     |               |               |
-|   657.xz_s.0          |   Error       |               |               |               |
+|   657.xz_s.0          |   running native run
 |   657.xz_s.1          |
