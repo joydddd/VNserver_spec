@@ -19,25 +19,34 @@ https://github.com/nus-comparch/looppoint/tree/acdb54f1897373f945e5a608090dc7d3d
 Looppoint: HPCA 2022 Multi-threaded Application Simulation! !!Thank God they have all the scripts I need!!!! 
 
 # Current Running Simulations
-slice size of 1b 
+## slice size of 1b, native icelake arch
 ```
 ./looppoint/run-looppoint.py -c $(LOOPPOINT_CFG) -n 8 --force **<--reuse-profile> --no-validate
 ```
-|   Testbench           |   pinballs    |   BBV         |   Simpoint    |   sniper      |
-|-----------------------|---------------|---------------|---------------|---------------|
-|   /                   |   [log_whole] |   [gen_BBV]   |  [Simpoint]   |   [SNIPER]    |
-|   600.perlbench_s.0   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`  |
-|   600.perlbench_s.1   |   running     |
-|   600.perlbench_s.2   |   running     |
-|   602.gcc_s.0         |   finish      |   seg fault   |               |               |
+|   Testbench           |   pinballs    |   BBV         |   Simpoint    |   sniper      | comments |
+|-----------------------|---------------|---------------|---------------|---------------|----------|
+|   tags                |   [log_whole] |   [gen_BBV]   |  [Simpoint]   |   [SNIPER]    |
+|   600.perlbench_s.0   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, w Performance Model Enabled ==no trace generated== |
+|   600.perlbench_s.1   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
+|   600.perlbench_s.2   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
+|   602.gcc_s.0         |   finish      |   ==seg fault==   |               |               |
 |   602.gcc_s.1         |   
 |   602.gcc_s.2         |
-|   605.mcf_s           |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`  |
-|   620.omnetpp_s       |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
-|   625.x264_s.0        |   running     |
-|   625.x264_s.1        |   running     |
-|   625.x264_s.2        |   running     |
-|   631.deepsjeng_s     |   finish      |   finish      |     finish    |   restarted using `--reuse-profile`   |
-|   648.exchange2_s     |   finish      |   running     |               |               |
-|   657.xz_s.0          |   running native run
-|   657.xz_s.1          |
+|   605.mcf_s           |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated |
+|   620.omnetpp_s       |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated |
+|   625.x264_s.0        |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated
+|   625.x264_s.1        |   running     |               |               |                                       |*native run successful*
+|   625.x264_s.2        |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
+|   631.deepsjeng_s     |   finish      |   finish      |       finish  |   restarted using `--reuse-profile`   |
+|   648.exchange2_s     |   finish      |   finish      |       finish  |   restarted using `--reuse-profile`   |
+|   657.xz_s.0          |   ==ERROR==   |               |               |                                       |*native run successful* 
+|   657.xz_s.1          |   ==ERROR==     |               |               |                                       |*native run successful* 
+
+
+### 625.x264_s.1
+```
+yuv [info]: 1280x720p 0:0 @ 25/1 fps (cfr)
+x264 [info]: using cpu capabilities: none!
+x264 [error]: 2nd pass has more frames than 1st pass (1000 vs 282)
+x264 [error]: x264_encoder_open failed
+```

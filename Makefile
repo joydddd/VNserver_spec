@@ -25,3 +25,6 @@ spec_run_%:
 
 looppoint_run:
 	./looppoint/run-looppoint.py -c $(LOOPPOINT_CFG) -n 8 --force --reuse-profile --no-validate
+
+looppoint_run_new:
+	./looppoint/run-looppoint.py -c $(LOOPPOINT_CFG) -n 8 --force --no-validate
