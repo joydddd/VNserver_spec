@@ -26,8 +26,8 @@ Looppoint: HPCA 2022 Multi-threaded Application Simulation! !!Thank God they hav
 |   Testbench           |   pinballs    |   BBV         |   Simpoint    |   sniper      | comments |
 |-----------------------|---------------|---------------|---------------|---------------|----------|
 |   tags                |   [log_whole] |   [gen_BBV]   |  [Simpoint]   |   [SNIPER]    |
-|   600.perlbench_s.0   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, w Performance Model Enabled ==no trace generated== |
-|   600.perlbench_s.1   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
+|   600.perlbench_s.0   |   finish      |   finish      |   finish      |   |
+|   600.perlbench_s.1   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated   |
 |   600.perlbench_s.2   |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
 |   602.gcc_s.0         |   finish      |   ==seg fault==   |               |               |
 |   602.gcc_s.1         |   
@@ -36,9 +36,9 @@ Looppoint: HPCA 2022 Multi-threaded Application Simulation! !!Thank God they hav
 |   620.omnetpp_s       |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated |
 |   625.x264_s.0        |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated
 |   625.x264_s.1        |   running     |               |               |                                       |*native run successful*
-|   625.x264_s.2        |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`   |
-|   631.deepsjeng_s     |   finish      |   finish      |       finish  |   restarted using `--reuse-profile`   |
-|   648.exchange2_s     |   finish      |   finish      |       finish  |   restarted using `--reuse-profile`   |
+|   625.x264_s.2        |   finish      |   finish      |   finish      |   restarted using `--reuse-profile`, trace generated  |
+|   631.deepsjeng_s     |   finish      |   finish      |       finish  |   restarted using `cache-only`   |
+|   648.exchange2_s     |   finish      |   finish      |       finish  |   restarted using `--reuse-profile`, performance model enabled, ==no trace generated==  |
 |   657.xz_s.0          |   ==ERROR==   |               |               |                                       |*native run successful* 
 |   657.xz_s.1          |   ==ERROR==     |               |               |                                       |*native run successful* 
 
