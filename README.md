@@ -26,19 +26,19 @@ Looppoint: HPCA 2022 Multi-threaded Application Simulation! !!Thank God they hav
 |   Testbench           |   pinballs    |   BBV         |   Simpoint    |   sniper      | comments |
 |-----------------------|---------------|---------------|---------------|---------------|----------|
 |   tags                |   [log_whole] |   [gen_BBV]   |  [Simpoint]   |   [SNIPER]    |
-|   600.perlbench_s.0   |   finish      |   finish      |   finish      |  `20230425160758` running r1 using `cache-only` | Apr 25 16:07
-|   600.perlbench_s.1   |   finish      |   finish      |   finish      |  `20230420163100` running r6 using `detailed`, trace generated   | Apr 24 19:21
-|   600.perlbench_s.2   |   finish      |   finish      |   finish      |  `20230421212559` running r4 using `cache-only`, trace generated   | Apr 25 07:21
+|   600.perlbench_s.0   |   finish      |   finish      |   finish      |  `20230425160758` using `cache-only` terminated | Apr 25 16:07
+|   600.perlbench_s.1   |   finish      |   finish      |   finish      |  `20230420163100` finished using `detailed`  |
+|   600.perlbench_s.2   |   finish      |   finish      |   finish      |  `20230421212559` running r4 using `cache-only` terminated  |
 |   602.gcc_s.0         |   finish      |   ==seg fault==   |               |               |
 |   602.gcc_s.1         |   finish      |   ==seg fault==   |               |               |
 |   602.gcc_s.2         |   finish      |   ==seg fault==   |               |               |
-|   605.mcf_s           |   finish      |   finish      |   finish      |   `20230418220545` running r3 using `detailed`, trace generated | Apr 21 14:56
-|   620.omnetpp_s       |   finish      |   finish      |   finish      |   `20230418220039` running r5 using `detailed`, trace generated | Apr 25 13:30
-|   625.x264_s.0        |   finish      |   finish      |   finish      |   `20230420162754` running r7 using `detailed`, trace generated | Apr 25 12:03
-|   625.x264_s.1        |   finish      |   finish      |   finish      |   `20230421211306` running r3 using `cache-only`, ==no trace generated== | Apr 24 08:44
-|   625.x264_s.2        |   finish      |   finish      |   finish      |   `20230425155842` running r1 using `cache-only` | Apr 25 15:58
-|   631.deepsjeng_s     |   finish      |   finish      |       finish  |   `20230421205749` running r1 using `cache-only` | Apr 21 20:57 
-|   648.exchange2_s     |   finish      |   finish      |       finish  |   `20230421212103` running r3 using `cache-only`, ==no trace generated==  | Apr 25 06:19
+|   605.mcf_s           |   finish      |   finish      |   finish      |   `20230418220545` using `detailed` terminated | 
+|   620.omnetpp_s       |   finish      |   finish      |   finish      |   `20230418220039` using `detailed` terminated | 
+|   625.x264_s.0        |   finish      |   finish      |   finish      |   `20230420162754` using `detailed` finshed | 
+|   625.x264_s.1        |   finish      |   finish      |   finish      |   `20230421211306` using `cache-only` terminated |
+|   625.x264_s.2        |   finish      |   finish      |   finish      |   `20230425155842` using `cache-only` terminated |
+|   631.deepsjeng_s     |   finish      |   finish      |       finish  |   `20230421205749` using `cache-only` terminated | 
+|   648.exchange2_s     |   finish      |   finish      |       finish  |   `20230421212103` using `cache-only` terminated |
 |   657.xz_s.0          |   ==ERROR==   |               |               |                                       |*native run successful* 
 |   657.xz_s.1          |   ==ERROR==     |               |               |                                       |*native run successful* 
 
