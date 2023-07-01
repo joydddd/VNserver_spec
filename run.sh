@@ -1,5 +1,15 @@
 ###### onnxruntime
 ./build.sh --config Release --build_shared_lib --parallel --skip_tests
+
+
+### sniper 
+
+/home/joydong/Desktop/snipersim/spec/sniper/run-sniper        -n 10        -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --no-cache-warming --trace-args="-sniper:flow 1000" -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:chain+0x3229:count4329326580:global" --trace-args="-pinplay:control stop:address:chain+0x3229:count4456164370:global" -ggeneral/inst_mode_init=fast_forward --cache-only -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1 --maxthreads=10 --trace-dir="/mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1" -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
+
+
+--maxthreads=10 --trace-dir="/mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1"
+
+-n 10        -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --trace-args="-sniper:flow 1000" -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:chain+0x3229:count4329326580:global" --trace-args="-pinplay:control stop:address:chain+0x3229:count4456164370:global" -gperf_model/fast_forward/oneipc/interval=100 -ggeneral/inst_mode_init=cache_only --cache-only -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1        -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
 ############################################################
 ########### Run Loop Point commands ########################
 ############################################################
