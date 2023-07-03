@@ -10,10 +10,18 @@
 --maxthreads=10 --trace-dir="/mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1"
 
 -n 10        -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --trace-args="-sniper:flow 1000" -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:chain+0x3229:count4329326580:global" --trace-args="-pinplay:control stop:address:chain+0x3229:count4456164370:global" -gperf_model/fast_forward/oneipc/interval=100 -ggeneral/inst_mode_init=cache_only --cache-only -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1        -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
+
+### gen cluster
+/home/joydong/Desktop/spec/looppoint/tools/sde-external-9.14.0-2022-10-25-lin/pinplay-scripts/sde_pinpoints.py --pintool=sde-global-looppoint.so --global_regions --pccount_regions --cfg /mnt/sda/spec/genomicsbench/benchmarks/chain/chain.cfg --whole_pgm_dir /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-default/whole_program.0 -S 10000000000 --warmup_factor=1 --maxk=50 --dimensions=100 --append_status -s --simpoint_options=" -dim 100 -coveragePct 1.0 -maxK 50 " -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
+
+
+/home/joydong/Desktop/spec/looppoint/tools/sde-external-9.14.0-2022-10-25-lin/pinplay-scripts/sde_pinpoints.py --pintool=sde-global-looppoint.so --global_regions --pccount_regions --cfg /mnt/sda/spec/genomicsbench/benchmarks/chain/chain.cfg --whole_pgm_dir /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/whole_program.0 -S 10000000000 --warmup_factor=2 --maxk=50 --dimensions=100 --append_status -s --simpoint_options= -dim 100 -coveragePct 1.0 -maxK 50  
+
+
 ############################################################
 ########### Run Loop Point commands ########################
 ############################################################
-./looppoint/run-looppoint.py -c $LOOPPOINT_CFG -n 10 --force --no-validate --reuse-profile -a icelake_s --pin-hook
+./looppoint/run-looppoint.py -c $LOOPPOINT_CFG -n 10 --force --no-validate --reuse-profile -a icelake_s --pin-hook --warmup-factor=1 --roi-length 1000000000
 
 ############################################################
 ########### Run Sniper commands ############################
