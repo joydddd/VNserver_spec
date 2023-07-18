@@ -2,14 +2,23 @@
 ./build.sh --config Release --build_shared_lib --parallel --skip_tests
 
 
-### sniper 
+### test warmup events
 
-/home/joydong/Desktop/snipersim/spec/sniper/run-sniper        -n 10        -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --no-cache-warming --trace-args="-sniper:flow 1000" -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:chain+0x3229:count4329326580:global" --trace-args="-pinplay:control stop:address:chain+0x3229:count4456164370:global" -ggeneral/inst_mode_init=fast_forward --cache-only -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1 --maxthreads=10 --trace-dir="/mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1" -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
+$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control warmup-start:address:chain+0x3229:count3981422787:global -control start:address:chain+0x3229:count4329326580:global -control stop:address:chain+0x3229:count4456164370:global -controller_log 1 -- ./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10
+
+
+### sniper parsec
+export LD_LIBRARY_PATH=/home/joydong/Desktop/spec/parsec-benchmark/pkgs/libs/hooks/inst/amd64-linux.gcc-hooks/lib
+/home/joydong/Desktop/spec/sniper/run-sniper        -n 10      -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --no-cache-warming -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:__parsec_roi_begin:bcast" --trace-args="-pinplay:control stop:address:__parsec_roi_end:bcast" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /home/joydong/Desktop/spec/parsec-benchmark/pkgs/apps/blackscholes/sim/blackscholes-simlarge-20230715/  -- "../inst/amd64-linux.gcc-hooks/bin/blackscholes 9 ../run/in_64K.txt ../run/prices.txt" 2>&1 | tee sniper.out
+
 
 
 --maxthreads=10 --trace-dir="/mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1_1"
 
 -n 10        -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --trace-args="-sniper:flow 1000" -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:chain+0x3229:count4329326580:global" --trace-args="-pinplay:control stop:address:chain+0x3229:count4456164370:global" -gperf_model/fast_forward/oneipc/interval=100 -ggeneral/inst_mode_init=cache_only --cache-only -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1        -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
+
+## gen bbv
+/home/joydong/Desktop/spec/looppoint/tools/gen_concat_vectors /mnt/sda/spec/genomicsbench/benchmarks/dbg/custom-chain-0-test-passive-10-default/dbg.0_795572.Data/dbg.0_795572.global.bb 10
 
 ### gen cluster
 /home/joydong/Desktop/spec/looppoint/tools/sde-external-9.14.0-2022-10-25-lin/pinplay-scripts/sde_pinpoints.py --pintool=sde-global-looppoint.so --global_regions --pccount_regions --cfg /mnt/sda/spec/genomicsbench/benchmarks/chain/chain.cfg --whole_pgm_dir /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-default/whole_program.0 -S 10000000000 --warmup_factor=1 --maxk=50 --dimensions=100 --append_status -s --simpoint_options=" -dim 100 -coveragePct 1.0 -maxK 50 " -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
@@ -21,12 +30,13 @@
 ############################################################
 ########### Run Loop Point commands ########################
 ############################################################
-./looppoint/run-looppoint.py -c $LOOPPOINT_CFG -n 10 --force --no-validate --reuse-profile -a icelake_s --pin-hook --warmup-factor=1 --roi-length 1000000000
-
+./looppoint/run-looppoint.py -c $LOOPPOINT_CFG -n 10 --force --no-validate --reuse-profile -a icelake_s --pin-hook --warmup-factor=1 --roi-length=1000000000 --no-flowcontrol
 ############################################################
 ########### Run Sniper commands ############################
 ############################################################
 ./sniper/record-trace --roi -f 50000000000 -d 1000000000 -o results/bsw/trace.sift -- ./genomicsbench/benchmarks/bsw/bsw -pairs genomicsbench/input-datasets/bsw/large/bandedSWA_SRR7733443_1m_input.txt -t 1 -b 512
+
+/home/joydong/Desktop/snipersim/run-sniper --roi -n 10 -c icelake_s -sprogresstrace:10000000 --no-cache-warming  -- ../pr -f ../wikipedia-20070206/wikipedia-20070206.mtx -n 1 | tee sniper.out
 
 ./vnsniper/run-sniper -c icelake -n 4 --traces=results/bsw/trace.sift --cache-only
 ###################################################################
