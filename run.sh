@@ -2,10 +2,6 @@
 ./build.sh --config Release --build_shared_lib --parallel --skip_tests
 
 
-### test warmup events
-
-$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control warmup-start:address:chain+0x3229:count3981422787:global -control start:address:chain+0x3229:count4329326580:global -control stop:address:chain+0x3229:count4456164370:global -controller_log 1 -- ./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10
-
 
 ### sniper parsec
 export LD_LIBRARY_PATH=/home/joydong/Desktop/spec/parsec-benchmark/pkgs/libs/hooks/inst/amd64-linux.gcc-hooks/lib
@@ -17,6 +13,30 @@ export LD_LIBRARY_PATH=/home/joydong/Desktop/spec/parsec-benchmark/pkgs/libs/hoo
 
 -n 10        -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --trace-args="-sniper:flow 1000" -ssimuserroi --roi-script --trace-args="-pinplay:control start:address:chain+0x3229:count4329326580:global" --trace-args="-pinplay:control stop:address:chain+0x3229:count4456164370:global" -gperf_model/fast_forward/oneipc/interval=100 -ggeneral/inst_mode_init=cache_only --cache-only -gperf_model/fast_forward/oneipc/include_memory_latency=true -d /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/simulation/r1        -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
 
+
+## replay test
+export SPEC_ROOT=$PWD
+export SDE_BUILD_KIT=$SPEC_ROOT/sde
+export PINBALL2ELF=$SPEC_ROOT/pinball2elf
+
+## for getting icount for pin_hook_init & pin_hook_fini
+$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control start:address:pin_hook_init,stop:address:pin_hook_fini -controller_log 1 -controller_olog ./pinplay_controller.log -- ../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/model.onnx -D
+
+
+# onnxruntime resnet
+$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control precond:address:pin_hook_init,warmup-start:icount:82000000000:global,start:icount:1000000000:global,stop:icount:10000000000:global -controller_log 1 -controller_olog ./pinplay_controller.log -- ../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/resnet50-v1-12.onnx -D
+
+$SPEC_ROOT/sniper/run-sniper        -n 10      -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:82000000000:global,start:icount:1000000000:global,stop:icount:10000000000:global" --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog ./sim/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=true -d ./sim  -- ../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/resnet50-v1-12.onnx -D
+
+# onnxrutnime 3dunet
+{ $SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control precond:address:pin_hook_init,warmup-start:icount:130000000000:global,start:icount:1000000000:global,stop:icount:10000000000:global -controller_log 1 -controller_olog ./pinplay_controller.log -- ../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/model.onnx -D; } &> sde.out
+
+$SPEC_ROOT/sniper/run-sniper        -n 10      -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -cicelake_s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:130000000000:global,start:icount:1000000000:global,stop:icount:10000000000:global" --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog ./sim/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=true -d ./sim  -- "../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/model.onnx -D" 2>&1 | tee sniper.out
+
+## sniper pin command.
+
+$SPEC_ROOT/sniper/pin_kit/pin -mt -injection child -xyzzy -ifeellucky -follow_execv 1  -t $SPEC_ROOT/sniper/sift/recorder/obj-intel64/sift_recorder -sniper:verbose 1 -sniper:debug 0 -sniper:roi 0 -sniper:roi-mpi 0 -sniper:f 0 -sniper:d 0 -sniper:b 0 -sniper:o . -sniper:e 1 -sniper:s 0 -sniper:r 1 -sniper:pa 0 -sniper:rtntrace 1 -sniper:stop 0  -sniper:flow 1000 -pinplay:control stop:address:chain+0x3229:count4456164370:global -pinplay:control warmup-stop:address:chain+0x3229:count4329326580:global -pinplay:control start:address:chain+0x3229:count3981422787:global -pinplay:controller_log 1 -pinplay:controller_olog ./20230717-default/pinplay_controller.log  -- ../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/resnet50-v1-12.onnx -D
+
 ## gen bbv
 /home/joydong/Desktop/spec/looppoint/tools/gen_concat_vectors /mnt/sda/spec/genomicsbench/benchmarks/dbg/custom-chain-0-test-passive-10-default/dbg.0_795572.Data/dbg.0_795572.global.bb 10
 
@@ -24,7 +44,7 @@ export LD_LIBRARY_PATH=/home/joydong/Desktop/spec/parsec-benchmark/pkgs/libs/hoo
 /home/joydong/Desktop/spec/looppoint/tools/sde-external-9.14.0-2022-10-25-lin/pinplay-scripts/sde_pinpoints.py --pintool=sde-global-looppoint.so --global_regions --pccount_regions --cfg /mnt/sda/spec/genomicsbench/benchmarks/chain/chain.cfg --whole_pgm_dir /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-default/whole_program.0 -S 10000000000 --warmup_factor=1 --maxk=50 --dimensions=100 --append_status -s --simpoint_options=" -dim 100 -coveragePct 1.0 -maxK 50 " -- "./chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10"
 
 
-/home/joydong/Desktop/spec/looppoint/tools/sde-external-9.14.0-2022-10-25-lin/pinplay-scripts/sde_pinpoints.py --pintool=sde-global-looppoint.so --global_regions --pccount_regions --cfg /mnt/sda/spec/genomicsbench/benchmarks/chain/chain.cfg --whole_pgm_dir /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/whole_program.0 -S 10000000000 --warmup_factor=2 --maxk=50 --dimensions=100 --append_status -s --simpoint_options= -dim 100 -coveragePct 1.0 -maxK 50  
+/home/joydong/Desktop/spec/looppoint/tools/sde-external-9.14.0-2022-10-25-lin/pinplay-scripts/sde_pinpoints.py --pintool=sde-global-looppoint.so --global_regions --pccount_regions --cfg /mnt/sda/spec/genomicsbench/benchmarks/chain/chain.cfg --whole_pgm_dir /mnt/sda/spec/genomicsbench/benchmarks/chain/custom-chain-0-test-passive-10-20230629154100/whole_program.0 -S 10000000000 --warmup_factor=2 --maxk=50 --dimensions=100 --append_status -s --simpoint_options= -dim 100 -coveragePct 1.0 -maxK 50
 
 
 ############################################################
@@ -46,7 +66,7 @@ export LD_LIBRARY_PATH=/home/joydong/Desktop/spec/parsec-benchmark/pkgs/libs/hoo
 ./genomicsbench/benchmarks/fmi/fmi ./genomicsbench/input-datasets/fmi/broad ./genomicsbench/input-datasets/fmi/large/SRR7733443_10m_1.fastq 512 19 1
 
 ## bsw
-/usr/bin/time -v 
+/usr/bin/time -v
 heaptrack ./bsw -pairs ../../input-datasets/bsw/large/bandedSWA_SRR7733443_1m_input.txt -t 1 -b 512
 ./pin/pin -t pin/source/tools/ManualExamples/obj-intel64/inscount2.so -- ./genomicsbench/benchmarks/bsw/bsw -pairs genomicsbench/input-datasets/bsw/large/bandedSWA_SRR7733443_1m_input.txt -t 1 -b 512
 
