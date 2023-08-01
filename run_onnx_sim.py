@@ -7,7 +7,7 @@ SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'bsw', 'dbg', 'chain', 'kmer-cnt', 'pileup']
 graph_set = ['pr', 'pr_spmv', 'sssp', 'bfs', 'bc', 'cc', 'cc_sv', 'tc']
-test_set = ['cc_sv']
+test_set = ['pr']
 # test_set = ['resnet']
 
 
@@ -77,12 +77,20 @@ benches['pileup'] = {
                 {'name': 'r2', 'ff_icount' : 650767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
 }
 
+# benches['pr'] = {
+#     'cmd' : '../../pr -f ../../webbase-2001/webbase-2001.mtx -n 1',
+#     # pin_hook_init global icount: 4,584,727,445,620
+#     # pin_hook_fini global icount: 4,730,536,799,846 // 145,809,354,226
+#     'regions': [{'name': 'r1', 'ff_icount' : 105809354226, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+#                 {'name': 'r2', 'ff_icount' : 45809354226, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+# }
+
 benches['pr'] = {
-    'cmd' : '../../pr -f ../../webbase-2001/webbase-2001.mtx -n 1',
-    # pin_hook_init global icount: 4,584,727,445,620
-    # pin_hook_fini global icount: 4,730,536,799,846 // 145,809,354,226
-    'regions': [{'name': 'r1', 'ff_icount' : 105809354226, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r2', 'ff_icount' : 45809354226, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+    'cmd' : '../../pr -f ../../benchmark/graphs/kron.sg -n 1',
+    # pin_hook_init global icount: 496,327,755
+    # pin_hook_fini global icount: 62,255,172,042 // 61,758,844,287
+    'regions': [{'name': 'r1', 'ff_icount' : 11758844287, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 41758844287, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
 }
 
 benches['pr_spmv'] = {
@@ -119,7 +127,7 @@ benches['cc_sv'] = {
 }
 
 benches['tc'] = {
-    'cmd' : '../../tc -f ../../GAP-twitter/GAP-twitter.mtx -n 1',
+    'cmd' : '../../tc -f ../../mycielskian20/mycielskian20.mtx -n 1',
 }
 
 
