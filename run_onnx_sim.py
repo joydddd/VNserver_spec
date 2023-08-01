@@ -6,7 +6,8 @@ import datetime
 SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'bsw', 'dbg', 'chain', 'kmer-cnt', 'pileup']
-test_set = ['bsw']
+graph_set = ['pr', 'pr_spmv', 'sssp', 'bfs', 'bc', 'cc', 'cc_sv', 'tc']
+test_set = ['cc_sv']
 # test_set = ['resnet']
 
 
@@ -50,12 +51,21 @@ benches['bsw'] = {
 
 benches['dbg'] = {
     'cmd' : './dbg ../../input-datasets/dbg/large/ERR194147-mem2-chr22.bam chr22:0-50818468 ../../input-datasets/dbg/large/Homo_sapiens_assembly38.fasta 10',
-    'regions': []
+    # pin_hook_init global icount: 135,442,369,317
+    # pin_hook_fini global icount: 2,252,177,293,572 // 2,116,734,924,255
+    'regions': [{'name': 'r1', 'ff_icount' : 1116734924255, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 516734924255, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r3', 'ff_icount' : 1516734924255, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
 }
 
 benches['chain'] = {
     'cmd' : './chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10',
-    'regions': []
+    # pin_hook_init global icount: 897,270,215,617
+    # pin_hook_fini global icount: 1,337,813,610,738 // 440,543,395,121
+    'regions': [
+                {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }
+                ]
 }
 
 benches['kmer-cnt'] = {
@@ -65,18 +75,63 @@ benches['kmer-cnt'] = {
 
 benches['pileup'] = {
     'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-64444167 10 ',
+    # pin_hook_init global icount:14,246,308
+    # pin_hook_fini global icount: 1,050,781,289,380 // 1,050,767,043,072
+    'regions': [{'name': 'r1', 'ff_icount' : 250767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 650767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+}
+
+benches['pr'] = {
+    'cmd' : '../../pr -f ../../webbase-2001/webbase-2001.mtx -n 1',
+    # pin_hook_init global icount: 4,584,727,445,620
+    # pin_hook_fini global icount: 4,730,536,799,846 // 145,809,354,226
+    'regions': [{'name': 'r1', 'ff_icount' : 105809354226, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 45809354226, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+}
+
+benches['pr_spmv'] = {
+    'cmd' : '../../pr_spmv -f ../../webbase-2001/webbase-2001.mtx -n 1',
+    # pin_hook_init global icount: 4585059346044
+    # pin_hook_fini global icount: 4752972186227 // 167,912,840,183
+    'regions': [{'name': 'r1', 'ff_icount' : 107912840183, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 57912840183, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+}
+
+benches['sssp'] = {
+    'cmd' : '../../sssp -f ../../GAP-road/GAP-road.mtx -n 1 -r 64',
     'regions': []
 }
 
+benches['bfs'] = {
+    'cmd' : '../../bfs -f ../../GAP-urand/GAP-urand.mtx -n 1',
+}
 
+benches['bc'] = {
+    'cmd' : '../../bc -f ../../GAP-road/GAP-road.mtx -n 1',
+}
 
+benches['cc'] = {
+    'cmd' : '../../cc -f ../../GAP-twitter/GAP-twitter.mtx -n 1',
+}
+
+benches['cc_sv'] = {
+    'cmd' : '../../cc_sv -f ../../webbase-2001/webbase-2001.mtx -n 1',
+    # pin_hook_init global icount: 4584898946423
+    # pin_hook_fini global icount: 4684589336834 // 99,690,390,411
+    'regions': [{'name': 'r1', 'ff_icount' : 69690390411, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 39690390411, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+}
+
+benches['tc'] = {
+    'cmd' : '../../tc -f ../../GAP-twitter/GAP-twitter.mtx -n 1',
+}
 
 
 config['arch'] = 'icelake_s'
 
 
 ###################### Sniper Commands ######################
-sniper_command = '$SNIPER_ROOT/run-sniper        -n 10      -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=true -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command = '$SNIPER_ROOT/run-sniper       -n 10      -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
 region_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
 
@@ -92,10 +147,11 @@ os.environ["SNIPER_ROOT"] = os.path.join(SPEC_ROOT, 'sniper')
 
 onnx_model_path = os.path.join(SPEC_ROOT, 'onnxruntime/models')
 genom_bench_path = os.path.join(SPEC_ROOT, 'genomicsbench/benchmarks')
+gapbs_bench_path = os.path.join(SPEC_ROOT, 'gapbs/run')
 
 def run_native(bench):
     print("******************* Running native " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path
+    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
     bench_path = os.path.join(path, bench)
     output_path = os.path.join(bench_path, 'native-run')
     os.chdir(bench_path)
@@ -107,7 +163,7 @@ def run_native(bench):
         
 def run_sniper(bench):
     print("******************* Running sniper " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path
+    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     sim_results_dir_root = 'sim-{date:%Y-%m-%d_%H:%M:%S}'.format( date=datetime.datetime.now() )
@@ -129,7 +185,7 @@ def run_sniper(bench):
         
 def run_region(bench):
     print("******************* Running regions " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path
+    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     results_dir = os.path.join(bench_path, 'regions')
@@ -147,7 +203,7 @@ def run_region(bench):
         
 def run_roi_icount(bench):
     print("******************* Running roi icount " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path
+    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     results_dir = os.path.join(bench_path, 'roi')
@@ -159,10 +215,15 @@ def run_roi_icount(bench):
     print(roi_icount_command % locals())
     os.system(roi_icount_command % locals())
         
-    
+import sys
 
 for bench in test_set:
-    # run_native(bench)
-    run_sniper(bench)
-    # run_region(bench)
-    # run_roi_icount(bench)
+    argv = sys.argv[1]
+    if (argv == 'native'):
+        run_native(bench)
+    if (argv == 'sniper'):
+        run_sniper(bench)
+    if (argv == 'region'):
+        run_region(bench)
+    if (argv == 'icount'):
+        run_roi_icount(bench)

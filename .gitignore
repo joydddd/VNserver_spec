@@ -1,7 +1,18 @@
 SPEC2017/
 *.tgz
 *.tar.*
+darknet/
+DRAMsim3/
+gapbs/
+genomicsbench/
+GraphMat/
+inference/
+memtier_benchmark/
+onnxruntime/
+parsec**/
+phoronix-test-suite/
 PinPoints/
+pinball2elf/
 end_to_end_trace/
 looppoint/
 log/
@@ -9,4 +20,8 @@ pin/
 pinplay-tools/
 sde-external**/
 SimPoint**/
+sniper
 spec_bin/
+sde
+vnsniper
+.**
