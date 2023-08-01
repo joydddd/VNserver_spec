@@ -24,8 +24,12 @@ benches['3dunet'] = {
     'cmd'   : '../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/model.onnx -D',
     # pin_hook_init Global icount: 430082223621
     # pin_hook_fini Global icount: 860865205136 // 430,782,981,515
-    'regions' : [{'name': 'r1', 'ff_icount' : 230782981515, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                 {'name': 'r2', 'ff_icount' : 130782981515, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+    'regions' : [
+                 {'name': 'r1', 'ff_icount' : 230782981515, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                 {'name': 'r2', 'ff_icount' : 130782981515, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                 {'name': 'r3', 'ff_icount' : 330782981515, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                 {'name': 'r4', 'ff_icount' : 60782981515, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }
+                 ]
 }
 
 benches['fmi'] = {
@@ -129,15 +133,15 @@ def run_region(bench):
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     results_dir = os.path.join(bench_path, 'regions')
-    if os.path.exists(results_dir):
-        os.system('rm -rf %s' % results_dir)
-    os.makedirs(results_dir)
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
     exe_command = benches[bench]['cmd']
     for r in benches[bench]['regions']:
         ff_icount = r['ff_icount']
         warmup_icount = r['warmup_icount']
         sim_icount = r['sim_icount']
         pinplay_log = os.path.join(results_dir, r['name'])
+        os.system('rm -f %s*' % pinplay_log)
         print(region_command % locals())
         os.system(region_command % locals())
         
