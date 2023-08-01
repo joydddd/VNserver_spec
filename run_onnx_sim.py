@@ -7,14 +7,23 @@ SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'bsw', 'dbg', 'chain', 'kmer-cnt', 'pileup']
 graph_set = ['pr', 'pr_spmv', 'sssp', 'bfs', 'bc', 'cc', 'cc_sv', 'tc']
-test_set = ['cc_sv']
+test_set = ['resnet']
 # test_set = ['resnet']
+
+config = {}
+config['arch'] = 'coaxial_s'
+config['ncores'] = 12
+
+# config['arch'] = 'icelake_s'
+# config['arch'] = 'icelake_cxl'
+# config['arch'] = 'icelake_vn'
+# config['ncores'] = 10
+
 
 
 benches = {}
-config  = {}
 benches['resnet'] = {
-    'cmd'   : '../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/resnet50-v1-12.onnx -D',
+    'cmd'   : '../../build/Linux/Release/onnx -r 1 -c 1 -x %(ncores)s ex/resnet50-v1-12.onnx -D' % config,
     # pin_hook_init Global icount: 180325165538
     # pin_hook_fini Global icount: 359314218609// 178,989,053,071
     'regions' : [ {'name': 'r1', 'ff_icount' : 100989053071, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
@@ -22,7 +31,7 @@ benches['resnet'] = {
 }
 
 benches['3dunet'] = {
-    'cmd'   : '../../build/Linux/Release/onnx -r 1 -c 1 -x 10 ex/model.onnx -D',
+    'cmd'   : '../../build/Linux/Release/onnx -r 1 -c 1 -x %(ncores)s ex/model.onnx -D' % config,
     # pin_hook_init Global icount: 430082223621
     # pin_hook_fini Global icount: 860865205136 // 430,782,981,515
     'regions' : [
@@ -34,7 +43,7 @@ benches['3dunet'] = {
 }
 
 benches['fmi'] = {
-    'cmd' : './fmi ../../input-datasets/fmi/broad ../../input-datasets/fmi/small/SRR7733443_1m_1.fastq 512 19 10',
+    'cmd' : './fmi ../../input-datasets/fmi/broad ../../input-datasets/fmi/small/SRR7733443_1m_1.fastq 512 19 %(ncores)s' % config,
     # pin_hook_init global icount: 11076996653
     # pin_hook_fini global icount: 173932537459 // 162,855,540,806
     'regions': [{'name': 'r1', 'ff_icount' : 82855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }, 
@@ -42,7 +51,7 @@ benches['fmi'] = {
 }
 
 benches['bsw'] = {
-    'cmd' :  './bsw -pairs ../../input-datasets/bsw/large/bandedSWA_SRR7733443_500k_input.txt  -t 10 -b 512',
+    'cmd' :  './bsw -pairs ../../input-datasets/bsw/large/bandedSWA_SRR7733443_500k_input.txt  -t %(ncores)s -b 512' % config,
     # pin_hook_init global icount: 11174244380
     # pin_hook_fini global icount: 170256191236 // 159,081,946,856
     'regions': [{'name': 'r1', 'ff_icount' : 89081946856, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
@@ -50,7 +59,7 @@ benches['bsw'] = {
 }
 
 benches['dbg'] = {
-    'cmd' : './dbg ../../input-datasets/dbg/large/ERR194147-mem2-chr22.bam chr22:0-50818468 ../../input-datasets/dbg/large/Homo_sapiens_assembly38.fasta 10',
+    'cmd' : './dbg ../../input-datasets/dbg/large/ERR194147-mem2-chr22.bam chr22:0-50818468 ../../input-datasets/dbg/large/Homo_sapiens_assembly38.fasta %(ncores)s' % config,
     # pin_hook_init global icount: 135,442,369,317
     # pin_hook_fini global icount: 2,252,177,293,572 // 2,116,734,924,255
     'regions': [{'name': 'r1', 'ff_icount' : 1116734924255, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
@@ -59,7 +68,7 @@ benches['dbg'] = {
 }
 
 benches['chain'] = {
-    'cmd' : './chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t 10',
+    'cmd' : './chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in -o ../../input-datasets/chain/large/c_elegans_40x.10k.out -t %(ncores)s' % config,
     # pin_hook_init global icount: 897,270,215,617
     # pin_hook_fini global icount: 1,337,813,610,738 // 440,543,395,121
     'regions': [
@@ -69,12 +78,12 @@ benches['chain'] = {
 }
 
 benches['kmer-cnt'] = {
-    'cmd' : './kmer-cnt --reads ../../input-datasets/kmer-cnt/large/Loman_E.coli_MAP006-1_2D_50x.fasta --config ../../tools/Flye/flye/config/bin_cfg/asm_raw_reads.cfg --threads 10',
+    'cmd' : './kmer-cnt --reads ../../input-datasets/kmer-cnt/large/Loman_E.coli_MAP006-1_2D_50x.fasta --config ../../tools/Flye/flye/config/bin_cfg/asm_raw_reads.cfg --threads %(ncores)s' % config,
     'regions': []
 }
 
 benches['pileup'] = {
-    'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-64444167 10 ',
+    'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-64444167 %(ncores)s ' % config,
     # pin_hook_init global icount:14,246,308
     # pin_hook_fini global icount: 1,050,781,289,380 // 1,050,767,043,072
     'regions': [{'name': 'r1', 'ff_icount' : 250767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
@@ -127,11 +136,8 @@ benches['tc'] = {
 }
 
 
-config['arch'] = 'icelake_s'
-
-
 ###################### Sniper Commands ######################
-sniper_command = '$SNIPER_ROOT/run-sniper       -n 10      -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
 region_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count 10 -control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
 
@@ -169,7 +175,6 @@ def run_sniper(bench):
     sim_results_dir_root = 'sim-{date:%Y-%m-%d_%H:%M:%S}'.format( date=datetime.datetime.now() )
     sim_results_dir_root = os.path.join(bench_path, sim_results_dir_root)
     os.makedirs(sim_results_dir_root)
-    arch = config['arch']
     exe_command = benches[bench]['cmd']
     for r in benches[bench]['regions']:
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
@@ -177,11 +182,11 @@ def run_sniper(bench):
         ff_icount = r['ff_icount']
         warmup_icount = r['warmup_icount']
         sim_icount = r['sim_icount']
-        print(sniper_command % locals())
+        print(sniper_command % {**locals(), **config})
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
-        os.system(sniper_command % locals())
-        os.system('mv *.trace %(sim_results_dir)s' % locals())
-        os.system('mv *.out %(sim_results_dir)s' % locals())
+        os.system(sniper_command % {**locals(), **config})
+        os.system('mv *.trace %(sim_results_dir)s' % {**locals(), **config})
+        os.system('mv *.out %(sim_results_dir)s' % {**locals(), **config})
         
 def run_region(bench):
     print("******************* Running regions " + bench + "************************")
