@@ -5,18 +5,21 @@ import datetime
 
 SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
-genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'chain', 'kmer-cnt', 'pileup', 'bsw-s']
+genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'chain', 'chain-m', 'kmer-cnt', 'pileup', 'pileup-s', 'bsw-s']
 graph_set = ['pr', 'pr-kron', 'pr-kron-s', 'pr_spmv', 'sssp', 'bfs', 'bc', 'cc', 'cc_sv', 'tc']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
-test_set = ['bsw-s']
+test_set = ['pileup-s']
 
 config = {}
 config['simulator'] = 'vnsniper'
 # config['simulator'] = 'sniper'
 
 
-# config['arch'] = 'zen4_s'
-config['arch'] = 'zen4_cxl'
+# arch_list = ['zen4_s']
+arch_list = ['zen4_cxl']
+# arch_list = ['zen4_vn']
+# arch_list = ['zen4_no_freshness']
+# arch_list = ['zen4_vn', 'zen4_no_freshness']
 config['ncores'] = 32
 
 
@@ -31,6 +34,7 @@ config['ncores'] = 32
 G1 = 1000000000 # 1bilion
 M100 = 100000000 # 100 million
 M1 = 1000000 # 1 million
+M10 = (M1 * 10) # 10 million
 
 
 benches = {}
@@ -59,7 +63,9 @@ benches['fmi'] = {
     # pin_hook_init global icount: 11076996653
     # pin_hook_fini global icount: 173932537459 // 162,855,540,806
     'regions': [{'name': 'r1', 'ff_icount' : 82855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }, 
-                {'name': 'r2', 'ff_icount' : 42855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+                {'name': 'r2', 'ff_icount' : 42855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'r2-t32', 'ff_icount' : 122904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },]
 }
 
 benches['fmi-l'] = {
@@ -89,7 +95,8 @@ benches['bsw-l'] = {
 
 benches['bsw-s'] = {
     'cmd' :  './bsw -pairs ../../input-datasets/bsw/small/bandedSWA_SRR7733443_100k_input.txt  -t %(ncores)s -b 512' % config,
-    'regions': [{'name': 'r1-t32', 'ff_icount' : 3238814760, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 }]
+    # 'regions': [{'name': 'r1-t32', 'ff_icount' : 3238814760, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 }]
+    'regions': [{'name': 'r2-t32', 'ff_icount' : 1238814760, 'warmup_icount' : M10*32, 'sim_icount' : M10*32, 'ncores': 32 }]
 }
 
 benches['dbg'] = {
@@ -108,11 +115,17 @@ benches['chain'] = {
     # pin_hook_init global icount: 897,270,215,617
     # pin_hook_fini global icount: 1,337,813,610,738 // 440,543,395,121
     'regions': [
-                {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'r2-t32', 'ff_icount': 340593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                # {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                # {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                # {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                # {'name': 'r2-t32', 'ff_icount': 340593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'rs1-t32', 'ff_icount': 140593939208, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
+}
+
+
+benches['chain-m'] = {
+    'cmd' : './chain -i ../../input-datasets/chain/large/c_elegans_40x.10k.in_100m -o ../../input-datasets/chain/large/c_elegans_40x.100m.out -t %(ncores)s' % config,
 }
 
 benches['kmer-cnt'] = {
@@ -126,8 +139,15 @@ benches['pileup'] = {
     # pin_hook_fini global icount: 1,050,781,289,380 // 1,050,767,043,072
     'regions': [{'name': 'r1', 'ff_icount' : 250767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 {'name': 'r2', 'ff_icount' : 650767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r1-t32', 'ff_icount' : G1*300, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'r2-t32', 'ff_icount': G1*600, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }]
+                {'name': 'rs1-t32', 'ff_icount' : G1*300, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+               ]
+}
+
+benches['pileup-s'] = {
+    'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-14444167 %(ncores)s ' % config,
+    'regions': [
+                {'name': 'rs1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M10, 'sim_icount' : 32*M100, 'ncores': 32 },
+                ]
 }
 
 benches['pr'] = {
@@ -167,14 +187,16 @@ benches['pr-kron'] = {
     # pin_hook_init global icount: 1,085,882,166
     # pin_hook_fini global icount: 125,263,751,069 // 124,177,868,903
     'regions': [
-                {'name': 'r1-t32', 'ff_icount' : G1*30, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'r2-t32', 'ff_icount': G1*80, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                # {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                # {'name': 'r2-t32', 'ff_icount': 80111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },  
+                {'name': 'rs1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
 }
 
 benches['pr-kron-s'] = {
     'cmd' : '../../pr -f ../../benchmark/graphs/kron-g22.sg -n 1',
     'regions': [{'name': 'r1-t32', 'ff_icount' : 2068478955, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 }]
+    # 'regions': [{'name': 'r2-t32', 'ff_icount' : 1068478955, 'warmup_icount' : M10*32, 'sim_icount' : M10*32, 'ncores': 32 }]
 }
 
 benches['pr_spmv'] = {
@@ -265,6 +287,7 @@ def run_sniper(bench):
                 continue
         except(KeyError):
             continue
+        print("///// REGION: " + r['name'] + " /////")
         
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
@@ -298,6 +321,7 @@ def run_sniper_gdb(bench):
                 continue
         except(KeyError):
             continue
+        print("///// REGION: " + r['name'] + " /////")
         
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
@@ -331,6 +355,7 @@ def run_region(bench):
                 continue
         except(KeyError):
             continue
+        print("///// REGION: " + r['name'] + " /////")
         ff_icount = r['ff_icount']
         warmup_icount = r['warmup_icount']
         sim_icount = r['sim_icount']
@@ -357,15 +382,18 @@ def run_roi_icount(bench):
         
 import sys
 
+argv = sys.argv[1]
 for bench in test_set:
-    argv = sys.argv[1]
     if (argv == 'native'):
         run_native(bench)
-    if (argv == 'sniper'):
-        run_sniper(bench)
-    if (argv == 'sniper-gdb'):
-        run_sniper_gdb(bench)
     if (argv == 'region'):
         run_region(bench)
     if (argv == 'icount'):
         run_roi_icount(bench)
+    for arch in arch_list:
+        config['arch'] = arch
+        print("Arch: " + arch)
+        if (argv == 'sniper'):
+            run_sniper(bench)
+        if (argv == 'sniper-gdb'):
+            run_sniper_gdb(bench)
