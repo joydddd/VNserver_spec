@@ -6,9 +6,10 @@ import datetime
 SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s', 'bsw-s']
-graph_set = ['pr', 'pr-kron', 'pr-kron-s', 'pr_spmv', 'sssp', 'bfs', 'bc', 'cc', 'cc_sv', 'tc']
+graph_set = ['pr', 'pr-kron', 'pr-kron-s', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
+llama_set = ['llama-8', 'llama-5']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
-test_set = ['kmer-cnt']
+test_set = ['llama-8']
 
 config = {}
 # config['simulator'] = 'vnsniper'
@@ -141,13 +142,15 @@ benches['kmer-cnt'] = {
                 # {'name': 'r1-t32', 'ff_icount' : 7780355253, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 {'name': 'rs1-t32', 'ff_icount' : 27780355253, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 ],
-    'extra-threads': 300
+    'extra-threads': 300,
+    'scheduler' : 'pinned'
 }
 
 benches['kmer-cnt-s'] = {
     'cmd' : './kmer-cnt --reads ../../input-datasets/kmer-cnt/small/Loman_E.coli_MAP006-1_2D_50x_1000.fasta --config ../../tools/Flye/flye/config/bin_cfg/asm_raw_reads.cfg --threads %(ncores)s' % config,
     'regions': [],
-    'extra-threads': 100
+    'extra-threads': 100,
+    'scheduler' : 'pinned'
 }
 
 
@@ -226,13 +229,41 @@ benches['pr_spmv'] = {
                 {'name': 'r2', 'ff_icount' : 57912840183, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
 }
 
-benches['sssp'] = {
-    'cmd' : '../../sssp -f ../../GAP-road/GAP-road.mtx -n 1 -r 64',
-    'regions': []
+
+benches['bfs-web'] = {
+    'cmd' : '../../bfs -f ../../benchmark/graphs/web.sg -n 1',
 }
 
-benches['bfs'] = {
-    'cmd' : '../../bfs -f ../../GAP-urand/GAP-urand.mtx -n 1',
+benches['bfs-kron'] = {
+    'cmd' : '../../bfs -f ../../benchmark/graphs/kron-g27.sg -n 1',
+}
+
+benches['bfs-road'] = {
+    'cmd' : '../../bfs -f ../../benchmark/graphs/road.sg -n 1',
+}
+
+benches['bfs-twitter'] = {
+    'cmd' : '../../bfs -f ../../benchmark/graphs/twitter.sg -n 1',
+    'regions':[
+        {'name': 'rs1-t32', 'ff_icount' : M10, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+    ],
+    'scheduler' : 'roaming'
+}
+
+
+benches['sssp-road'] = {
+    'cmd' : '../../sssp -f ../../benchmark/graphs/road.wsg -d50000 -n 1',
+    'regions':[
+        {'name': 'rs1-t32', 'ff_icount' : 1067946919, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+    ]
+}
+
+
+benches['sssp-twitter'] = {
+    'cmd' : '../../sssp -f ../../benchmark/graphs/twitter.wsg -d2 -n 1',
+    'regions':[
+        {'name': 'rs1-t32', 'ff_icount' : 6187789171, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+    ]
 }
 
 benches['bc'] = {
@@ -253,6 +284,20 @@ benches['cc_sv'] = {
 
 benches['tc'] = {
     'cmd' : '../../tc -f ../../mycielskian20/mycielskian20.mtx -n 1',
+}
+
+benches['llama-8'] = {
+    'cmd' : '../../run ../../model/llama2_7b.bin -z ../../tokenizer.bin -n 8',
+    'regions': [
+                # {'name': 'rs1-t32', 'ff_icount' : 21492126225, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : M10*32, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                ]
+}
+
+benches['llama-5'] = {
+    'cmd' : '../../run ../../model/llama2_7b.bin -z ../../tokenizer.bin -n 5',
+    'regions': [{'name': 'rs1-t32', 'ff_icount' : 15561094057, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                ]
 }
 
 
@@ -278,10 +323,12 @@ os.environ["OMP_NUM_THREADS"] = str(config['ncores'])
 onnx_model_path = os.path.join(SPEC_ROOT, 'onnxruntime/models')
 genom_bench_path = os.path.join(SPEC_ROOT, 'genomicsbench/benchmarks')
 gapbs_bench_path = os.path.join(SPEC_ROOT, 'gapbs/run')
+llama2_bench_path = os.path.join(SPEC_ROOT, 'llama2.c/sim')
+
 
 def run_native(bench):
     print("******************* Running native " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
+    path = config['bench_path']
     bench_path = os.path.join(path, bench)
     output_path = os.path.join(bench_path, 'native-run')
     os.chdir(bench_path)
@@ -293,7 +340,7 @@ def run_native(bench):
         
 def run_sniper(bench):
     print("******************* Running sniper " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
+    path = config['bench_path']
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     sim_results_dir_root = 'sim-{date:%Y-%m-%d_%H:%M:%S}'.format( date=datetime.datetime.now() )
@@ -317,8 +364,8 @@ def run_sniper(bench):
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
         sniper_exe = sniper_command % {**locals(), **config}
-        if 'extra-threads' in benches[bench]:
-            sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type=pinned')
+        if 'scheduler' in benches[bench]:
+            sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type='+benches[bench]['scheduler'])
         print(sniper_exe)
         os.system(sniper_exe)
         
@@ -326,11 +373,12 @@ def run_sniper(bench):
         os.system('mv *.out %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.log %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
+        os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
 
 
 def run_sniper_gdb(bench):
     print("******************* Running sniper " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
+    path = config['bench_path']
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     sim_results_dir_root = 'sim-{date:%Y-%m-%d_%H:%M:%S}'.format( date=datetime.datetime.now() )
@@ -354,8 +402,8 @@ def run_sniper_gdb(bench):
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
         sniper_exe = sniper_command_gdb % {**locals(), **config}
-        if 'extra-threads' in benches[bench]:
-            sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type=pinned')
+        if 'scheduler' in benches[bench]:
+            sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type='+benches[bench]['scheduler'])
         print(sniper_exe)
         os.system(sniper_exe)
         
@@ -363,11 +411,12 @@ def run_sniper_gdb(bench):
         os.system('mv *.out %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.log %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
+        os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
     os.system('rm -rf %(sim_results_dir_root)s' % {**locals(), **config})
         
 def run_region(bench):
     print("******************* Running regions " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
+    path = config['bench_path']
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     results_dir = os.path.join(bench_path, 'regions')
@@ -393,7 +442,7 @@ def run_region(bench):
         
 def run_roi_icount(bench):
     print("******************* Running roi icount " + bench + "************************")
-    path = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path
+    path = config['bench_path']
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     results_dir = os.path.join(bench_path, 'roi')
@@ -413,6 +462,7 @@ for bench in test_set:
     config['nthreads'] = config['ncores']
     if 'extra-threads' in benches[bench]:
         config['nthreads'] += benches[bench]['extra-threads']
+    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else llama2_bench_path
     if (argv == 'native'):
         run_native(bench)
     if (argv == 'region'):
