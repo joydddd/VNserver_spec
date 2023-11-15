@@ -5,21 +5,21 @@ import datetime
 
 SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
-genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'chain', 'chain-m', 'kmer-cnt', 'pileup', 'pileup-s', 'bsw-s']
+genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s', 'bsw-s']
 graph_set = ['pr', 'pr-kron', 'pr-kron-s', 'pr_spmv', 'sssp', 'bfs', 'bc', 'cc', 'cc_sv', 'tc']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
-test_set = ['pileup-s']
+test_set = ['kmer-cnt']
 
 config = {}
-config['simulator'] = 'vnsniper'
-# config['simulator'] = 'sniper'
+# config['simulator'] = 'vnsniper'
+config['simulator'] = 'sniper'
 
 
-# arch_list = ['zen4_s']
-arch_list = ['zen4_cxl']
+arch_list = ['zen4_s']
+# arch_list = ['zen4_cxl']
 # arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
-# arch_list = ['zen4_vn', 'zen4_no_freshness']
+arch_list = ['zen4_cxl', 'zen4_vn', 'zen4_no_freshness']
 config['ncores'] = 32
 
 
@@ -107,7 +107,14 @@ benches['dbg'] = {
                 {'name': 'r2', 'ff_icount' : 516734924255, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 {'name': 'r3', 'ff_icount' : 1516734924255, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 {'name': 'r1-t32', 'ff_icount' : 835447539618, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'r2-t32', 'ff_icount': 1635447539618, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }]
+                # {'name': 'r2-t32', 'ff_icount': 1635447539618, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                ]
+}
+
+benches['dbg-s'] = {
+    'cmd' : './dbg ../../input-datasets/dbg/large/ERR194147-mem2-chr22.bam chr22:0-20818468 ../../input-datasets/dbg/large/Homo_sapiens_assembly38.fasta %(ncores)s' % config,
+    'regions': [
+                {'name': 'rs1-t32', 'ff_icount': 107329187339, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }]
 }
 
 benches['chain'] = {
@@ -117,9 +124,9 @@ benches['chain'] = {
     'regions': [
                 # {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 # {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                # {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount': 340593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'rs1-t32', 'ff_icount': 140593939208, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
+                # {'name': 'rs1-t32', 'ff_icount': 140593939208, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
 }
 
@@ -130,8 +137,19 @@ benches['chain-m'] = {
 
 benches['kmer-cnt'] = {
     'cmd' : './kmer-cnt --reads ../../input-datasets/kmer-cnt/large/Loman_E.coli_MAP006-1_2D_50x.fasta --config ../../tools/Flye/flye/config/bin_cfg/asm_raw_reads.cfg --threads %(ncores)s' % config,
-    'regions': []
+    'regions': [
+                # {'name': 'r1-t32', 'ff_icount' : 7780355253, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'rs1-t32', 'ff_icount' : 27780355253, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                ],
+    'extra-threads': 300
 }
+
+benches['kmer-cnt-s'] = {
+    'cmd' : './kmer-cnt --reads ../../input-datasets/kmer-cnt/small/Loman_E.coli_MAP006-1_2D_50x_1000.fasta --config ../../tools/Flye/flye/config/bin_cfg/asm_raw_reads.cfg --threads %(ncores)s' % config,
+    'regions': [],
+    'extra-threads': 100
+}
+
 
 benches['pileup'] = {
     'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-64444167 %(ncores)s ' % config,
@@ -146,7 +164,8 @@ benches['pileup'] = {
 benches['pileup-s'] = {
     'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-14444167 %(ncores)s ' % config,
     'regions': [
-                {'name': 'rs1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M10, 'sim_icount' : 32*M100, 'ncores': 32 },
+                # {'name': 'rs1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M10, 'sim_icount' : 32*M100, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M100, 'sim_icount' : 32*G1, 'ncores': 32 },
                 ]
 }
 
@@ -242,12 +261,13 @@ sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresst
 
 sniper_command_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s  --gdb-wait   -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
-region_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count %(ncores)s -control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
+region_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count %(nthreads)s -control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
 
-roi_icount_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count %(ncores)s -control start:address:pin_hook_init,stop:address:pin_hook_fini -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
+roi_icount_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count %(nthreads)s -control start:address:pin_hook_init,stop:address:pin_hook_fini -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
 
 
 native_commamd = '/usr/bin/time -v %(exe_command)s 2>&1 | tee %(output_path)s/sniper.out'
+# native_commamd = 'gdb --args %(exe_command)s '
 
 os.environ["SPEC_ROOT"] = SPEC_ROOT
 os.environ["SDE_BUILD_KIT"] = os.path.join(SPEC_ROOT, 'sde')
@@ -296,8 +316,11 @@ def run_sniper(bench):
         sim_icount = r['sim_icount']
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
-        print(sniper_command % {**locals(), **config})
-        os.system(sniper_command % {**locals(), **config})
+        sniper_exe = sniper_command % {**locals(), **config}
+        if 'extra-threads' in benches[bench]:
+            sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type=pinned')
+        print(sniper_exe)
+        os.system(sniper_exe)
         
         os.system('mv *.trace %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.out %(sim_results_dir)s' % {**locals(), **config})
@@ -330,8 +353,11 @@ def run_sniper_gdb(bench):
         sim_icount = r['sim_icount']
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
-        print(sniper_command_gdb % {**locals(), **config})
-        os.system(sniper_command_gdb % {**locals(), **config})
+        sniper_exe = sniper_command_gdb % {**locals(), **config}
+        if 'extra-threads' in benches[bench]:
+            sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type=pinned')
+        print(sniper_exe)
+        os.system(sniper_exe)
         
         os.system('mv *.trace %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.out %(sim_results_dir)s' % {**locals(), **config})
@@ -384,6 +410,9 @@ import sys
 
 argv = sys.argv[1]
 for bench in test_set:
+    config['nthreads'] = config['ncores']
+    if 'extra-threads' in benches[bench]:
+        config['nthreads'] += benches[bench]['extra-threads']
     if (argv == 'native'):
         run_native(bench)
     if (argv == 'region'):
