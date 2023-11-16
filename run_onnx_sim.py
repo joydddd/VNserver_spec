@@ -6,21 +6,22 @@ import datetime
 SPEC_ROOT = os.getcwd()
 onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s', 'bsw-s']
-graph_set = ['pr', 'pr-kron', 'pr-kron-s', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
+graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
 llama_set = ['llama-8', 'llama-5']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
-test_set = ['llama-8']
+test_set = ['pr-kron']
 
 config = {}
 # config['simulator'] = 'vnsniper'
 config['simulator'] = 'sniper'
 
 
-arch_list = ['zen4_s']
+# arch_list = ['zen4_s']
 # arch_list = ['zen4_cxl']
 # arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
-arch_list = ['zen4_cxl', 'zen4_vn', 'zen4_no_freshness']
+arch_list = ['zen4_no_dramsim']
+# arch_list = ['zen4_cxl', 'zen4_vn', 'zen4_no_freshness']
 config['ncores'] = 32
 
 
@@ -209,6 +210,19 @@ benches['pr-kron'] = {
     # pin_hook_init global icount: 1,085,882,166
     # pin_hook_fini global icount: 125,263,751,069 // 124,177,868,903
     'regions': [
+                {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                # {'name': 'r2-t32', 'ff_icount': 80111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },  
+                # {'name': 'rs1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
+                ]
+}
+
+# same as pr-kron. Just for running a second instance. 
+benches['pr-kron-2'] = { 
+    'cmd' : '../../pr -f ../../benchmark/graphs/kron-g27.sg -n 1',
+    # t = 32
+    # pin_hook_init global icount: 1,085,882,166
+    # pin_hook_fini global icount: 125,263,751,069 // 124,177,868,903
+    'regions': [
                 # {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount': 80111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },  
                 {'name': 'rs1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
@@ -236,6 +250,9 @@ benches['bfs-web'] = {
 
 benches['bfs-kron'] = {
     'cmd' : '../../bfs -f ../../benchmark/graphs/kron-g27.sg -n 1',
+    'regions':[
+        {'name': 'roi', 'ncores': 32 }
+    ],
 }
 
 benches['bfs-road'] = {
@@ -246,8 +263,8 @@ benches['bfs-twitter'] = {
     'cmd' : '../../bfs -f ../../benchmark/graphs/twitter.sg -n 1',
     'regions':[
         {'name': 'rs1-t32', 'ff_icount' : M10, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+        # {'name': 'roi', 'ncores': 32 }
     ],
-    'scheduler' : 'roaming'
 }
 
 
@@ -271,7 +288,10 @@ benches['bc'] = {
 }
 
 benches['cc'] = {
-    'cmd' : '../../cc -f ../../GAP-twitter/GAP-twitter.mtx -n 1',
+    'cmd' : '../../cc -f ../../benchmark/graphs/twitter.sg -n1',
+    'regions':[
+        {'name': 'rs1-t32', 'ff_icount' : 1012802711, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+    ]
 }
 
 benches['cc_sv'] = {
@@ -283,7 +303,7 @@ benches['cc_sv'] = {
 }
 
 benches['tc'] = {
-    'cmd' : '../../tc -f ../../mycielskian20/mycielskian20.mtx -n 1',
+    'cmd' : '../../tc -f ../../benchmark/graphs/kronU.sg -n 1',
 }
 
 benches['llama-8'] = {
@@ -304,7 +324,12 @@ benches['llama-5'] = {
 ###################### Sniper Commands ######################
 sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
+sniper_command_roi = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+
 sniper_command_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s  --gdb-wait   -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+
+sniper_command_roi_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s   --gdb-wait  -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+
 
 region_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count %(nthreads)s -control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
 
@@ -358,14 +383,19 @@ def run_sniper(bench):
         
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
-        ff_icount = r['ff_icount']
-        warmup_icount = r['warmup_icount']
-        sim_icount = r['sim_icount']
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
-        sniper_exe = sniper_command % {**locals(), **config}
+        if r['name'] == 'roi':
+            sniper_exe = sniper_command_roi % {**locals(), **config}
+        else:
+            ff_icount = r['ff_icount']
+            warmup_icount = r['warmup_icount']
+            sim_icount = r['sim_icount']
+            sniper_exe = sniper_command % {**locals(), **config}
         if 'scheduler' in benches[bench]:
             sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type='+benches[bench]['scheduler'])
+        if 'ff-mode' in benches[bench]:
+            sniper_exe = sniper_exe.replace('-ggeneral/inst_mode_init=fast_forward', '-ggeneral/inst_mode_init='+benches[bench]['ff-mode'])
         print(sniper_exe)
         os.system(sniper_exe)
         
@@ -396,14 +426,19 @@ def run_sniper_gdb(bench):
         
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
-        ff_icount = r['ff_icount']
-        warmup_icount = r['warmup_icount']
-        sim_icount = r['sim_icount']
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
-        sniper_exe = sniper_command_gdb % {**locals(), **config}
+        if r['name'] == 'roi':
+            sniper_exe = sniper_command_roi_gdb % {**locals(), **config}
+        else:
+            ff_icount = r['ff_icount']
+            warmup_icount = r['warmup_icount']
+            sim_icount = r['sim_icount']
+            sniper_exe = sniper_command_gdb % {**locals(), **config}
         if 'scheduler' in benches[bench]:
             sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type='+benches[bench]['scheduler'])
+        if 'ff-mode' in benches[bench]:
+            sniper_exe = sniper_exe.replace('-ggeneral/inst_mode_init=fast_forward', '-ggeneral/inst_mode_init='+benches[bench]['ff-mode'])
         print(sniper_exe)
         os.system(sniper_exe)
         
