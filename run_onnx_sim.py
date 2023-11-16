@@ -9,7 +9,7 @@ genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m'
 graph_set = ['pr', 'pr-kron', 'pr-kron-s', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
 llama_set = ['llama-8', 'llama-5']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
-test_set = ['llama-8']
+test_set = ['bsw-l']
 
 config = {}
 # config['simulator'] = 'vnsniper'
@@ -66,7 +66,8 @@ benches['fmi'] = {
     'regions': [{'name': 'r1', 'ff_icount' : 82855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }, 
                 {'name': 'r2', 'ff_icount' : 42855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 {'name': 'r1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'r2-t32', 'ff_icount' : 122904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },]
+                # {'name': 'r2-t32', 'ff_icount' : 122904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                ]
 }
 
 benches['fmi-l'] = {
@@ -90,7 +91,8 @@ benches['bsw-l'] = {
     # pin_hook_init global icount: 23,484,072,677
     # pin_hook_fini global icount: 721,547,029,143 // 698,062,956,466
     'regions': [{'name': 'r1-t32', 'ff_icount' : 223568924357, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                {'name': 'r2-t32', 'ff_icount': 423568924357, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }]
+                # {'name': 'r2-t32', 'ff_icount': 423568924357, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                ]
 }
 
 
@@ -158,9 +160,10 @@ benches['pileup'] = {
     'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-64444167 %(ncores)s ' % config,
     # pin_hook_init global icount:14,246,308
     # pin_hook_fini global icount: 1,050,781,289,380 // 1,050,767,043,072
-    'regions': [{'name': 'r1', 'ff_icount' : 250767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r2', 'ff_icount' : 650767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'rs1-t32', 'ff_icount' : G1*300, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+    'regions': [
+                {'name': 'r1', 'ff_icount' : 250767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                # {'name': 'r2', 'ff_icount' : 650767043072, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                # {'name': 'rs1-t32', 'ff_icount' : G1*300, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                ]
 }
 
@@ -410,6 +413,7 @@ def run_sniper_gdb(bench):
         os.system('mv *.trace %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.out %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.log %(sim_results_dir)s' % {**locals(), **config})
+        os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
     os.system('rm -rf %(sim_results_dir_root)s' % {**locals(), **config})
