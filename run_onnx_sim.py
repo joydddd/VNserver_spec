@@ -8,20 +8,28 @@ onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s', 'bsw-s']
 graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
 llama_set = ['llama-8', 'llama-5']
+redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p']
+memcached_set = ['memcached-test']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
-test_set = ['bsw-l']
+
+test_set = ['memcached-test']
 
 config = {}
 # config['simulator'] = 'vnsniper'
 config['simulator'] = 'sniper'
+config['regions'] = None;
+config['abort_after_roi'] = ''
+config['port'] = 11211
+
 
 
 # arch_list = ['zen4_s']
-# arch_list = ['zen4_cxl']
+arch_list = ['zen4_cxl']
 # arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
-arch_list = ['zen4_no_dramsim']
-# arch_list = ['zen4_cxl', 'zen4_vn', 'zen4_no_freshness']
+# arch_list = ['zen4_no_dramsim']
+# arch_list = ['zen4_cxl_invisimem']
+
 config['ncores'] = 32
 
 
@@ -34,9 +42,42 @@ config['ncores'] = 32
 # config['ncores'] = 10
 
 G1 = 1000000000 # 1bilion
+G10 = (G1*10)
 M100 = 100000000 # 100 million
 M1 = 1000000 # 1 million
 M10 = (M1 * 10) # 10 million
+
+################################### Overwrite from cmd arguments ###################################
+
+import argparse
+
+parser = argparse.ArgumentParser(description='Run benchmarks')
+parser.add_argument('mode', type=str, help='Mode to run the benchmarks. Options: native, region, icount, memtier')
+parser.add_argument('memtier_mode', type=str, nargs='*', help='Mode to run the benchmarks. Options: load, test')
+parser.add_argument('--bench', type=str, nargs='*', help='Benchmarks to run. Options: all, kmer-cnt-s, pileup, pileup-s, pr, pr-kron, pr-kron-s, pr_spmv, bfs-web, bfs-kron, bfs-road, bfs-twitter, sssp-road, sssp-twitter, bc, cc, cc_sv, tc, llama-8, llama-5, redis-test, redis-5k, redis-5kw, redis-multi-p, memcached-test')
+parser.add_argument('--sim', type=str, help='Simulator to run the benchmarks. Options: sniper, vnsniper')
+parser.add_argument('--arch', type=str, nargs='*', help='Architecture to run the benchmarks. Options: zen4_s, zen4_cxl, zen4_vn, zen4_no_dramsim, etc.')
+parser.add_argument('-r','--region', type=str, nargs='*', help='Regions to run the benchmarks. Options: r1, r2, rs1-t32, etc.')
+parser.add_argument('-a', '--abort_after_roi', action='store_true', help='Abort after ROI')
+
+
+args = parser.parse_args()
+
+if args.bench:
+    test_set = args.bench
+    if "sim_test" in test_set:
+        test_set.remove("sim_test")
+        test_set.extend(sim_test)
+if args.arch:
+    arch_list = args.arch
+if  args.sim:
+    config['simulator'] = args.sim
+if args.region:
+    config['regions'] = args.region
+if args.abort_after_roi:
+    config['abort_after_roi'] = ':abort'
+
+################################### Overwrite from cmd arguments ###################################
 
 
 benches = {}
@@ -68,6 +109,7 @@ benches['fmi'] = {
                 {'name': 'r2', 'ff_icount' : 42855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 {'name': 'r1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount' : 122904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                # {'name': 'rs1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 ]
 }
 
@@ -83,15 +125,20 @@ benches['bsw'] = {
     'cmd' :  './bsw -pairs ../../input-datasets/bsw/large/bandedSWA_SRR7733443_500k_input.txt  -t %(ncores)s -b 512' % config,
     # pin_hook_init global icount: 11174244380
     # pin_hook_fini global icount: 170256191236 // 159,081,946,856
-    'regions': [{'name': 'r1', 'ff_icount' : 89081946856, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r2', 'ff_icount' : 49081946856, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 }]
+    'regions': [
+                # {'name': 'r1', 'ff_icount' : 89081946856, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                # {'name': 'r2', 'ff_icount' : 49081946856, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'rs1-t32', 'ff_icount' : 49081946856, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                ]
 }
 
 benches['bsw-l'] = {
     'cmd' :  './bsw -pairs ../../input-datasets/bsw/large/bandedSWA_SRR7733443_1m_input.txt  -t %(ncores)s -b 512' % config,
     # pin_hook_init global icount: 23,484,072,677
     # pin_hook_fini global icount: 721,547,029,143 // 698,062,956,466
-    'regions': [{'name': 'r1-t32', 'ff_icount' : 223568924357, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+    'regions': [
+                # {'name': 'r1-t32', 'ff_icount' : 223568924357, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'rs1-t32', 'ff_icount' : 223568924357, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount': 423568924357, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
                 ]
 }
@@ -128,9 +175,9 @@ benches['chain'] = {
     'regions': [
                 # {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 # {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                # {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount': 340593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                # {'name': 'rs1-t32', 'ff_icount': 140593939208, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
+                {'name': 'rs1-t32', 'ff_icount': 140593939208, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
 }
 
@@ -171,8 +218,8 @@ benches['pileup'] = {
 benches['pileup-s'] = {
     'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-14444167 %(ncores)s ' % config,
     'regions': [
-                # {'name': 'rs1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M10, 'sim_icount' : 32*M100, 'ncores': 32 },
-                {'name': 'r1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M100, 'sim_icount' : 32*G1, 'ncores': 32 },
+                {'name': 'rs1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M10, 'sim_icount' : 32*M100, 'ncores': 32 },
+                # {'name': 'r1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M100, 'sim_icount' : 32*G1, 'ncores': 32 },
                 ]
 }
 
@@ -213,9 +260,9 @@ benches['pr-kron'] = {
     # pin_hook_init global icount: 1,085,882,166
     # pin_hook_fini global icount: 125,263,751,069 // 124,177,868,903
     'regions': [
-                {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                # {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount': 80111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },  
-                # {'name': 'rs1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
+                {'name': 'rs1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
 }
 
@@ -234,8 +281,9 @@ benches['pr-kron-2'] = {
 
 benches['pr-kron-s'] = {
     'cmd' : '../../pr -f ../../benchmark/graphs/kron-g22.sg -n 1',
-    'regions': [{'name': 'r1-t32', 'ff_icount' : 2068478955, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 }]
-    # 'regions': [{'name': 'r2-t32', 'ff_icount' : 1068478955, 'warmup_icount' : M10*32, 'sim_icount' : M10*32, 'ncores': 32 }]
+    'regions': [{'name': 'r1-t32', 'ff_icount' : 2068478955, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 },
+                {'name': 'r2-t32', 'ff_icount' : 1068478955, 'warmup_icount' : M10*32, 'sim_icount' : M10*32, 'ncores': 32 }
+                ]
 }
 
 benches['pr_spmv'] = {
@@ -323,13 +371,69 @@ benches['llama-5'] = {
                 ]
 }
 
+benches['redis-test'] = {
+    'cmd' : '../../src/redis-server ./redis.conf --server-cpulist 1-%(ncores)s' % config,
+    
+    'loading_cmd': './memtier_benchmark --ratio=1:0 -R -t 10 -c 50 --requests=allkeys --key-pattern=P:P  --key-maximum=100000000', ## Database generation command. Produce a dump.rdb file in the running directory.
+    
+    'workload_cmd': './memtier_benchmark --ratio=1:10 -R -t 4 -c 50 --requests=10000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load', ## workload generation command 
+    'regions': [
+                ]
+}
+
+benches['redis-5k'] = {
+    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s' % config,
+    'regions': [
+                # {'name': 'rs1-t32', 'ff_icount' : 54700240978, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : 24700240978, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                ],
+    'workload_cmd': './memtier_benchmark --ratio=1:10 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' % config, ## workload generation command 
+}
+
+
+benches['redis-5kw'] = {
+    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s' % config,
+    'regions':  [
+                {'name': 'r1-t32', 'ff_icount' : 43454587818, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
+                ],
+    'workload_cmd': './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' % config, ## workload generation command 
+}
+
+
+# benches['redis-multi-p'] = {
+#     'cmd' : '../../src/redis-server --multi-service 2'
+#             ' ./redis.conf --port 6379 --server-cpulist 0-15 --loglevel debug --dbfilename dump.rdb' 
+#             ' ./redis.conf --port 6380 --server-cpulist 16-31 --loglevel debug --dbfilename dump.rdb.1' % config,
+#     'regions':  [
+#                 ],
+#     'workload_cmd': './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port 6379'
+#                     './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port 6380'## workload generation command 
+# }
+
+
+benches['memcached-test'] = {
+    # 'cmd' : '../../memcached -m 12288 -vv -t %(ncores)s --enable-shutdown' % config,
+    'cmd' : '../../memcached -m 12288 -v -t %(app_threads)d --enable-shutdown -p %(port)s' % config,
+    'no-oversubscribe': True,
+    'scheduler' : 'static',
+    'regions':  [
+                {'name': 'rs1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'r2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G10*32, 'ncores': 32 },
+                # {'name': 'roi', 'ncores': 32 }
+                ],
+    'extra-threads': 6, # maintenaince, crawler, lru_maintainer, logger, rebalance
+    'loading_cmd': './memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 10 -c 50 --requests=allkeys --key-pattern=P:P --key-maximum=100000000 --port %(port)s' % config,
+    'workload_cmd': ' ./memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 4 -c 50 --requests=500000 --key-pattern=G:G --wait-for-server-load --key-maximum=100000000 --shutdown-server --port %(port)s' % config
+}
+
 
 ###################### Sniper Commands ######################
-sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=none  -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
-sniper_command_roi = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command_roi = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=none -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out' # -gperf_model/fast_forward/oneipc/include_memory_latency=false
 
-sniper_command_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s  --gdb-wait   -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s  --gdb-wait   -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
 sniper_command_roi_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s   --gdb-wait  -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
@@ -352,6 +456,9 @@ onnx_model_path = os.path.join(SPEC_ROOT, 'onnxruntime/models')
 genom_bench_path = os.path.join(SPEC_ROOT, 'genomicsbench/benchmarks')
 gapbs_bench_path = os.path.join(SPEC_ROOT, 'gapbs/run')
 llama2_bench_path = os.path.join(SPEC_ROOT, 'llama2.c/sim')
+redis_bench_path = os.path.join(SPEC_ROOT, 'redis/run')
+memcached_bench_path = os.path.join(SPEC_ROOT, 'memcached/run')
+memtier_path = os.path.join(SPEC_ROOT, 'memtier_benchmark')
 
 
 def run_native(bench):
@@ -362,7 +469,7 @@ def run_native(bench):
     os.chdir(bench_path)
     if not os.path.exists(output_path):
         os.makedirs(output_path)
-    exe_command = benches[bench]['cmd']
+    exe_command = benches[bench]['cmd'] % config
     print(native_commamd % {**locals(), **config})
     os.system(native_commamd % {**locals(), **config})
         
@@ -375,12 +482,14 @@ def run_sniper(bench):
     print("Simulation name: " + sim_results_dir_root)
     sim_results_dir_root = os.path.join(bench_path, sim_results_dir_root)
     os.makedirs(sim_results_dir_root)
-    exe_command = benches[bench]['cmd']
+    exe_command = benches[bench]['cmd'] % config
     for r in benches[bench]['regions']:
         try: 
             if config['ncores'] != 10 and r['ncores'] != config['ncores']:
                 continue
         except(KeyError):
+            continue
+        if config['regions'] and r['name'] not in config['regions']:
             continue
         print("///// REGION: " + r['name'] + " /////")
         
@@ -418,7 +527,7 @@ def run_sniper_gdb(bench):
     print("Simulation name: " + sim_results_dir_root)
     sim_results_dir_root = os.path.join(bench_path, sim_results_dir_root)
     os.makedirs(sim_results_dir_root)
-    exe_command = benches[bench]['cmd']
+    exe_command = benches[bench]['cmd'] % config
     for r in benches[bench]['regions']:
         try: 
             if config['ncores'] != 10 and r['ncores'] != config['ncores']:
@@ -426,6 +535,8 @@ def run_sniper_gdb(bench):
         except(KeyError):
             continue
         print("///// REGION: " + r['name'] + " /////")
+        if config['regions'] and r['name'] not in config['regions']:
+            continue
         
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
@@ -461,13 +572,15 @@ def run_region(bench):
     results_dir = os.path.join(bench_path, 'regions')
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
-    exe_command = benches[bench]['cmd']
+    exe_command = benches[bench]['cmd'] % config
     for r in benches[bench]['regions']:
         try: 
             ncores = r['ncores']
             if config['ncores'] != 10 and ncores != config['ncores']:
                 continue
         except(KeyError):
+            continue
+        if config['regions'] and r['name'] not in config['regions']:
             continue
         print("///// REGION: " + r['name'] + " /////")
         ff_icount = r['ff_icount']
@@ -488,26 +601,51 @@ def run_roi_icount(bench):
     if os.path.exists(results_dir):
         os.system('rm -rf %s' % results_dir)
     os.makedirs(results_dir)
-    exe_command = benches[bench]['cmd']
+    exe_command = benches[bench]['cmd'] % config
     pinplay_log = os.path.join(results_dir, 'roi')
     print(roi_icount_command % {**locals(), **config})
     os.system(roi_icount_command % {**locals(), **config})
     os.system('mv foo.event_icount* %s' % results_dir)
+    
+def run_memtier(bench, load, test):
+    print("******************* Running memtier for" + bench + "************************")
+    os.chdir(memtier_path)
+    if (load):
+        print("LOADING......................................")
+        os.system(benches[bench]['loading_cmd'])
+    if (test):
+        print("TESTING......................................")
+        os.system(benches[bench]['workload_cmd'])
+        
         
 import sys
+    
+    
 
-argv = sys.argv[1]
+argv = args.mode
 for bench in test_set:
     config['nthreads'] = config['ncores']
     if 'extra-threads' in benches[bench]:
-        config['nthreads'] += benches[bench]['extra-threads']
-    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else llama2_bench_path
+        if 'no-oversubscribe' in benches[bench] and benches[bench]['no-oversubscribe']:
+            config['app_threads'] = config['ncores'] - benches[bench]['extra-threads']
+        else: 
+            config['nthreads'] += benches[bench]['extra-threads']
+    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else redis_bench_path if bench in redis_set else memcached_bench_path if bench in memcached_set else llama2_bench_path
     if (argv == 'native'):
         run_native(bench)
     if (argv == 'region'):
         run_region(bench)
     if (argv == 'icount'):
         run_roi_icount(bench)
+    if (argv == 'memtier'):
+        memtier_load = False
+        memtier_test = False
+        for arg in args.memtier_mode:
+            if arg == 'load':
+                memtier_load = True
+            if arg == 'test':
+                memtier_test = True
+        run_memtier(bench, memtier_load, memtier_test)
     for arch in arch_list:
         config['arch'] = arch
         print("Arch: " + arch)
