@@ -77,6 +77,10 @@ if args.region:
 if args.abort_after_roi:
     config['abort_after_roi'] = ':abort'
 
+print(config)
+print(test_set)
+print(arch_list)
+
 ################################### Overwrite from cmd arguments ###################################
 
 
@@ -372,7 +376,7 @@ benches['llama-5'] = {
 }
 
 benches['redis-test'] = {
-    'cmd' : '../../src/redis-server ./redis.conf --server-cpulist 1-%(ncores)s' % config,
+    'cmd' : '../../src/redis-server ./redis.conf --server-cpulist 1-%(ncores)s',
     
     'loading_cmd': './memtier_benchmark --ratio=1:0 -R -t 10 -c 50 --requests=allkeys --key-pattern=P:P  --key-maximum=100000000', ## Database generation command. Produce a dump.rdb file in the running directory.
     
@@ -382,21 +386,21 @@ benches['redis-test'] = {
 }
 
 benches['redis-5k'] = {
-    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s' % config,
+    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s',
     'regions': [
                 # {'name': 'rs1-t32', 'ff_icount' : 54700240978, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 {'name': 'r1-t32', 'ff_icount' : 24700240978, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
                 ],
-    'workload_cmd': './memtier_benchmark --ratio=1:10 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' % config, ## workload generation command 
+    'workload_cmd': './memtier_benchmark --ratio=1:10 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s', ## workload generation command 
 }
 
 
 benches['redis-5kw'] = {
-    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s' % config,
+    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s',
     'regions':  [
                 {'name': 'r1-t32', 'ff_icount' : 43454587818, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
                 ],
-    'workload_cmd': './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' % config, ## workload generation command 
+    'workload_cmd': './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' , ## workload generation command 
 }
 
 
@@ -413,7 +417,7 @@ benches['redis-5kw'] = {
 
 benches['memcached-test'] = {
     # 'cmd' : '../../memcached -m 12288 -vv -t %(ncores)s --enable-shutdown' % config,
-    'cmd' : '../../memcached -m 12288 -v -t %(app_threads)d --enable-shutdown -p %(port)s' % config,
+    'cmd' : '../../memcached -m 12288 -v -t %(app_threads)d --enable-shutdown -p %(port)s',
     'no-oversubscribe': True,
     'scheduler' : 'static',
     'regions':  [
@@ -423,8 +427,8 @@ benches['memcached-test'] = {
                 # {'name': 'roi', 'ncores': 32 }
                 ],
     'extra-threads': 6, # maintenaince, crawler, lru_maintainer, logger, rebalance
-    'loading_cmd': './memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 10 -c 50 --requests=allkeys --key-pattern=P:P --key-maximum=100000000 --port %(port)s' % config,
-    'workload_cmd': ' ./memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 4 -c 50 --requests=500000 --key-pattern=G:G --wait-for-server-load --key-maximum=100000000 --shutdown-server --port %(port)s' % config
+    'loading_cmd': './memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 10 -c 50 --requests=allkeys --key-pattern=P:P --key-maximum=100000000 --port %(port)s',
+    'workload_cmd': ' ./memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 4 -c 50 --requests=500000 --key-pattern=G:G --wait-for-server-load --key-maximum=100000000 --shutdown-server --port %(port)s'
 }
 
 
@@ -612,10 +616,10 @@ def run_memtier(bench, load, test):
     os.chdir(memtier_path)
     if (load):
         print("LOADING......................................")
-        os.system(benches[bench]['loading_cmd'])
+        os.system(benches[bench]['loading_cmd'] % config)
     if (test):
         print("TESTING......................................")
-        os.system(benches[bench]['workload_cmd'])
+        os.system(benches[bench]['workload_cmd'] % config)
         
         
 import sys
