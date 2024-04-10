@@ -10,27 +10,34 @@ graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', '
 llama_set = ['llama-8', 'llama-5']
 redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p']
 memcached_set = ['memcached-test']
+
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
 
-test_set = ['memcached-test']
+test_set = ['redis-5kw']
 
 config = {}
 # config['simulator'] = 'vnsniper'
 config['simulator'] = 'sniper'
 config['regions'] = None;
 config['abort_after_roi'] = ''
-config['port'] = 11211
+config['port'] = 11221
 
 
 
 # arch_list = ['zen4_s']
-arch_list = ['zen4_cxl']
+# arch_list = ['zen4_cxl']
 # arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
 # arch_list = ['zen4_no_dramsim']
 # arch_list = ['zen4_cxl_invisimem']
 
-config['ncores'] = 32
+# config['ncores'] = 32
+
+
+# arch_list = ['zen4_cxl_11']
+arch_list = ['zen4_no_dramsim_11']
+arch_list = ['zen4_vn_11', 'zen4_no_freshness_11']
+config['ncores'] = 11
 
 
 # config['arch'] = 'coaxial_s'
@@ -40,6 +47,24 @@ config['ncores'] = 32
 # config['arch'] = 'icelake_cxl'
 # config['arch'] = 'icelake_vn'
 # config['ncores'] = 10
+
+
+arch_ncores = {
+    'zen4_s'            : 32,
+    'zen4_cxl'          : 32,
+    'zen4_vn'           : 32,
+    'zen4_no_freshness' : 32,
+    'zen4_no_dramsim'   : 32,
+    'zen4_cxl_invisimem': 32,
+    'zen4_cxl_11'       : 11,
+    'zen4_vn_11'        : 11,
+    'zen4_no_freshness_11': 11,
+    'zen4_no_dramsim_11': 11,
+    'coaxial_s'         : 12,
+    'icelake_s'         : 10,
+    'icelake_cxl'       : 10,
+    'icelake_vn'        : 10
+}
 
 G1 = 1000000000 # 1bilion
 G10 = (G1*10)
@@ -59,6 +84,7 @@ parser.add_argument('--sim', type=str, help='Simulator to run the benchmarks. Op
 parser.add_argument('--arch', type=str, nargs='*', help='Architecture to run the benchmarks. Options: zen4_s, zen4_cxl, zen4_vn, zen4_no_dramsim, etc.')
 parser.add_argument('-r','--region', type=str, nargs='*', help='Regions to run the benchmarks. Options: r1, r2, rs1-t32, etc.')
 parser.add_argument('-a', '--abort_after_roi', action='store_true', help='Abort after ROI')
+parser.add_argument('-p', '--port', type=int, help='Port number for db workloads')
 
 
 args = parser.parse_args()
@@ -70,12 +96,15 @@ if args.bench:
         test_set.extend(sim_test)
 if args.arch:
     arch_list = args.arch
+    config['ncores'] = arch_ncores[args.arch[0]]
 if  args.sim:
     config['simulator'] = args.sim
 if args.region:
     config['regions'] = args.region
 if args.abort_after_roi:
     config['abort_after_roi'] = ':abort'
+if args.port:
+    config['port'] = args.port
 
 print(config)
 print(test_set)
@@ -285,7 +314,9 @@ benches['pr-kron-2'] = {
 
 benches['pr-kron-s'] = {
     'cmd' : '../../pr -f ../../benchmark/graphs/kron-g22.sg -n 1',
-    'regions': [{'name': 'r1-t32', 'ff_icount' : 2068478955, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 },
+    'regions': [{'name': 'r1-t11', 'ff_icount' : 838926162, 'warmup_icount' : M1*11, 'sim_icount' : M1*11, 'ncores': 11 },
+                {'name': 'r2-t11', 'ff_icount' : 838926162, 'warmup_icount' : M10*11, 'sim_icount' : M10*11, 'ncores': 11 },
+                {'name': 'r1-t32', 'ff_icount' : 2068478955, 'warmup_icount' : M1*32, 'sim_icount' : M1*32, 'ncores': 32 },
                 {'name': 'r2-t32', 'ff_icount' : 1068478955, 'warmup_icount' : M10*32, 'sim_icount' : M10*32, 'ncores': 32 }
                 ]
 }
@@ -391,13 +422,18 @@ benches['redis-5k'] = {
                 # {'name': 'rs1-t32', 'ff_icount' : 54700240978, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 {'name': 'r1-t32', 'ff_icount' : 24700240978, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
                 ],
-    'workload_cmd': './memtier_benchmark --ratio=1:10 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s', ## workload generation command 
+    'workload_cmd': './memtier_benchmark --ratio=1:10 -R -t 4 -c 50 --requests=50000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s', ## workload generation command 
 }
 
 
 benches['redis-5kw'] = {
-    'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s',
+    'cmd' : '../../src/redis-server ./redis.conf --io-threads %(app_threads)d --loglevel debug --port %(port)s',
+    'no-oversubscribe': True, 
+    'extra-threads': 7, # bio_close_file, bio_aof, bio_lazy_free
     'regions':  [
+                {'name': 'r1-t11', 'ff_icount' : 8699635780, 'warmup_icount' : M100*11, 'sim_icount' : G1*11, 'ncores': 11 },
+                {'name': 'roi', 'ncores': 11 },
+                {'name': 'rs1-t11', 'ff_icount' : 8699635780, 'warmup_icount' : M10*11, 'sim_icount' : M100*11, 'ncores': 11 },
                 {'name': 'r1-t32', 'ff_icount' : 43454587818, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
                 ],
     'workload_cmd': './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' , ## workload generation command 
@@ -652,6 +688,7 @@ for bench in test_set:
         run_memtier(bench, memtier_load, memtier_test)
     for arch in arch_list:
         config['arch'] = arch
+        config['ncores'] = arch_ncores[arch]
         print("Arch: " + arch)
         if (argv == 'sniper'):
             run_sniper(bench)
