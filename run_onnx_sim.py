@@ -9,11 +9,13 @@ genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m'
 graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
 llama_set = ['llama-8', 'llama-5']
 redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p']
-memcached_set = ['memcached-test']
+memcached_set = ['memcached-test', 'memcached-1']
 
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
+submission_set = ['bsw', 'fmi', 'chain', 'dbg-s', 'pileup-s', 'pr-kron', 'bfs-twitter', 'sssp-road', 'llama5']
 
-test_set = ['redis-5kw']
+test_set = ['memcached-1']
+
 
 config = {}
 # config['simulator'] = 'vnsniper'
@@ -26,18 +28,18 @@ config['port'] = 11221
 
 # arch_list = ['zen4_s']
 # arch_list = ['zen4_cxl']
-# arch_list = ['zen4_vn']
+arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
 # arch_list = ['zen4_no_dramsim']
 # arch_list = ['zen4_cxl_invisimem']
 
-# config['ncores'] = 32
+config['ncores'] = 32
 
 
 # arch_list = ['zen4_cxl_11']
-arch_list = ['zen4_no_dramsim_11']
-arch_list = ['zen4_vn_11', 'zen4_no_freshness_11']
-config['ncores'] = 11
+# arch_list = ['zen4_no_dramsim_11']
+# arch_list = ['zen4_vn_11', 'zen4_no_freshness_11']
+# config['ncores'] = 11
 
 
 # config['arch'] = 'coaxial_s'
@@ -142,7 +144,7 @@ benches['fmi'] = {
                 {'name': 'r2', 'ff_icount' : 42855540806, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
                 {'name': 'r1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 # {'name': 'r2-t32', 'ff_icount' : 122904630178, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
-                # {'name': 'rs1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                {'name': 'rs1-t32', 'ff_icount' : 62904630178, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 ]
 }
 
@@ -206,10 +208,10 @@ benches['chain'] = {
     # pin_hook_init global icount: 897,270,215,617
     # pin_hook_fini global icount: 1,337,813,610,738 // 440,543,395,121
     'regions': [
-                # {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                # {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
-                # {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                # {'name': 'r2-t32', 'ff_icount': 340593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'r1', 'ff_icount' : 230543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r2', 'ff_icount' : 130543395121, 'warmup_icount' : 1000000000, 'sim_icount' : 10000000000 },
+                {'name': 'r1-t32', 'ff_icount' : 140593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'r2-t32', 'ff_icount': 340593939208, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 {'name': 'rs1-t32', 'ff_icount': 140593939208, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
 }
@@ -252,7 +254,7 @@ benches['pileup-s'] = {
     'cmd' : './pileup ../../input-datasets/pileup/large/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam chr20:1-14444167 %(ncores)s ' % config,
     'regions': [
                 {'name': 'rs1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M10, 'sim_icount' : 32*M100, 'ncores': 32 },
-                # {'name': 'r1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M100, 'sim_icount' : 32*G1, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : 105498345510, 'warmup_icount' : 32*M100, 'sim_icount' : 32*G1, 'ncores': 32 },
                 ]
 }
 
@@ -293,8 +295,8 @@ benches['pr-kron'] = {
     # pin_hook_init global icount: 1,085,882,166
     # pin_hook_fini global icount: 125,263,751,069 // 124,177,868,903
     'regions': [
-                # {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
-                # {'name': 'r2-t32', 'ff_icount': 80111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },  
+                {'name': 'r1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'r2-t32', 'ff_icount': 80111837215, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },  
                 {'name': 'rs1-t32', 'ff_icount' : 40111837215, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 }
                 ]
 }
@@ -458,6 +460,7 @@ benches['memcached-test'] = {
     'scheduler' : 'static',
     'regions':  [
                 {'name': 'rs1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                {'name': 'rs2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32/5, 'ncores': 32 },
                 {'name': 'r1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 {'name': 'r2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G10*32, 'ncores': 32 },
                 # {'name': 'roi', 'ncores': 32 }
@@ -466,6 +469,8 @@ benches['memcached-test'] = {
     'loading_cmd': './memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 10 -c 50 --requests=allkeys --key-pattern=P:P --key-maximum=100000000 --port %(port)s',
     'workload_cmd': ' ./memtier_benchmark --protocol=memcache_text --ratio=1:0 -R -t 4 -c 50 --requests=500000 --key-pattern=G:G --wait-for-server-load --key-maximum=100000000 --shutdown-server --port %(port)s'
 }
+
+benches['memcached-1'] = benches['memcached-test'] # for running multiple memcached at the same time
 
 
 ###################### Sniper Commands ######################
