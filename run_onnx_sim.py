@@ -9,12 +9,13 @@ genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m'
 graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
 llama_set = ['llama-8', 'llama-5']
 redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p']
-memcached_set = ['memcached-test', 'memcached-1']
+memcached_set = ['memcached-test', 'memcached-1', 'memcached-2']
+mysql_set = ['mysql-test']
 
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
 submission_set = ['bsw', 'fmi', 'chain', 'dbg-s', 'pileup-s', 'pr-kron', 'bfs-twitter', 'sssp-road', 'llama5']
 
-test_set = ['memcached-1']
+test_set = ['memcached-2']
 
 
 config = {}
@@ -28,9 +29,9 @@ config['port'] = 11221
 
 # arch_list = ['zen4_s']
 # arch_list = ['zen4_cxl']
-arch_list = ['zen4_vn']
+# arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
-# arch_list = ['zen4_no_dramsim']
+arch_list = ['zen4_no_dramsim']
 # arch_list = ['zen4_cxl_invisimem']
 
 config['ncores'] = 32
@@ -349,9 +350,11 @@ benches['bfs-road'] = {
 
 benches['bfs-twitter'] = {
     'cmd' : '../../bfs -f ../../benchmark/graphs/twitter.sg -n 1',
+    'ff-mode': 'cache_only',
+    # 'ff-model': 'oneipc',
     'regions':[
         {'name': 'rs1-t32', 'ff_icount' : M10, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
-        # {'name': 'roi', 'ncores': 32 }
+        {'name': 'roi', 'ncores': 32 }
     ],
 }
 
@@ -420,6 +423,7 @@ benches['redis-test'] = {
 
 benches['redis-5k'] = {
     'cmd' : '../../src/redis-server ./redis.conf --loglevel debug --port %(port)s',
+    'ff-model': 'none', 
     'regions': [
                 # {'name': 'rs1-t32', 'ff_icount' : 54700240978, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 {'name': 'r1-t32', 'ff_icount' : 24700240978, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 }
@@ -431,6 +435,7 @@ benches['redis-5k'] = {
 benches['redis-5kw'] = {
     'cmd' : '../../src/redis-server ./redis.conf --io-threads %(app_threads)d --loglevel debug --port %(port)s',
     'no-oversubscribe': True, 
+    'ff-model': 'none', 
     'extra-threads': 7, # bio_close_file, bio_aof, bio_lazy_free
     'regions':  [
                 {'name': 'r1-t11', 'ff_icount' : 8699635780, 'warmup_icount' : M100*11, 'sim_icount' : G1*11, 'ncores': 11 },
@@ -457,10 +462,12 @@ benches['memcached-test'] = {
     # 'cmd' : '../../memcached -m 12288 -vv -t %(ncores)s --enable-shutdown' % config,
     'cmd' : '../../memcached -m 12288 -v -t %(app_threads)d --enable-shutdown -p %(port)s',
     'no-oversubscribe': True,
+    'ff-model': 'none', 
     'scheduler' : 'static',
     'regions':  [
                 {'name': 'rs1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 {'name': 'rs2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32/5, 'ncores': 32 },
+                {'name': 'rs3-t32', 'ff_icount' : 0, 'warmup_icount' : M10*32, 'sim_icount' : M10, 'ncores': 32 },
                 {'name': 'r1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 {'name': 'r2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G10*32, 'ncores': 32 },
                 # {'name': 'roi', 'ncores': 32 }
@@ -472,15 +479,35 @@ benches['memcached-test'] = {
 
 benches['memcached-1'] = benches['memcached-test'] # for running multiple memcached at the same time
 
+benches['memcached-2'] = benches['memcached-test'] # for running multiple memcached at the same time
+
+benches['memcached-3'] = benches['memcached-test'] # for running multiple memcached at the same time
+
+
+benches['mysql-test'] = {
+    'pre-cmd': 'cp -R ../../data_backup ./data',
+    'cmd' : '../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf -P %(port)s',
+    'post-cmd': 'rm -rf ./data',
+    # 'cmd': ../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf -P %(port)s --initialize-insecure ##Create Server
+    'scheduler' : 'static',
+    'regions':  [
+                ],
+    'extra-threads': 6, # maintenaince, crawler, lru_maintainer, logger, rebalance
+    'wl_path': '%s/mysql/tpcc-mysql' % SPEC_ROOT,
+    
+    # 'loading_cmd': '../usr/local/mysql/bin/mysql -u root -P %(port)s create tpcc1000; ../usr/local/mysql/bin/mysql -u root -P %(port)s tpcc1000 < create_table.sql; ../usr/local/mysql/bin/mysql -u root -P %(port)s tpcc1000 < add_fkey_idx.sql;',  # Create tables
+    'loading_cmd': 'export LD_LIBRARY_PATH=$SPEC_ROOT/mysql/usr/local/mysql/lib:$LD_LIBRARY_PATH; ./tpcc_load -h127.0.0.1 -d tpcc1000 -u root -P %(port)s -p "" -w 1000',
+    'workload_cmd': 'export LD_LIBRARY_PATH=$SPEC_ROOT/mysql/usr/local/mysql/lib:$LD_LIBRARY_PATH; ./tpcc-mysql/tpcc_start -h127.0.0.1 -dtpcc1000 -uroot -P %(port)s -p "" -w1000 -c32 -r10 -l1200'
+}
 
 ###################### Sniper Commands ######################
-sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=none  -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=oneipc -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
-sniper_command_roi = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=none -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out' # -gperf_model/fast_forward/oneipc/include_memory_latency=false
+sniper_command_roi = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=oneipc -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out' # -gperf_model/fast_forward/oneipc/include_memory_latency=false
 
-sniper_command_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s  --gdb-wait   -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s  --gdb-wait   -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=oneipc -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
-sniper_command_roi_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s   --gdb-wait  -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
+sniper_command_roi_gdb = '$SNIPER_ROOT/run-sniper       -n %(ncores)s   --gdb-wait  -v -sprogresstrace:10000000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming --roi -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=oneipc -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
 
 
 region_command = '$SDE_BUILD_KIT/sde -t sde-global-event-icounter.so -prefix foo -thread_count %(nthreads)s -control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global -controller_log 1 -controller_olog %(pinplay_log)s-controller.log -- %(exe_command)s 2>&1 | tee %(pinplay_log)s.out'
@@ -504,6 +531,7 @@ llama2_bench_path = os.path.join(SPEC_ROOT, 'llama2.c/sim')
 redis_bench_path = os.path.join(SPEC_ROOT, 'redis/run')
 memcached_bench_path = os.path.join(SPEC_ROOT, 'memcached/run')
 memtier_path = os.path.join(SPEC_ROOT, 'memtier_benchmark')
+mysql_path = os.path.join(SPEC_ROOT, 'mysql/run')
 
 
 def run_native(bench):
@@ -514,9 +542,13 @@ def run_native(bench):
     os.chdir(bench_path)
     if not os.path.exists(output_path):
         os.makedirs(output_path)
+    if 'pre-cmd' in benches[bench]:
+        os.system(benches[bench]['pre-cmd'])
     exe_command = benches[bench]['cmd'] % config
     print(native_commamd % {**locals(), **config})
     os.system(native_commamd % {**locals(), **config})
+    if 'post-cmd' in benches[bench]:
+        os.system(benches[bench]['post-cmd'])
         
 def run_sniper(bench):
     print("******************* Running sniper " + bench + "************************")
@@ -541,6 +573,9 @@ def run_sniper(bench):
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
         
+        if 'pre-cmd' in benches[bench]:
+            os.system(benches[bench]['pre-cmd'])
+        
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
         if r['name'] == 'roi':
             sniper_exe = sniper_command_roi % {**locals(), **config}
@@ -553,6 +588,9 @@ def run_sniper(bench):
             sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type='+benches[bench]['scheduler'])
         if 'ff-mode' in benches[bench]:
             sniper_exe = sniper_exe.replace('-ggeneral/inst_mode_init=fast_forward', '-ggeneral/inst_mode_init='+benches[bench]['ff-mode'])
+        if 'ff-model' in benches[bench]:
+            print("WARINING : ff-model is set to " + benches[bench]['ff-model'])
+            sniper_exe = sniper_exe.replace('-gperf_model/fast_forward/model=oneipc', '-gperf_model/fast_forward/model='+benches[bench]['ff-model'])
         print(sniper_exe)
         os.system(sniper_exe)
         
@@ -561,6 +599,8 @@ def run_sniper(bench):
         os.system('mv *.log %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
+        if 'post-cmd' in benches[bench]:
+            os.system(benches[bench]['post-cmd'])
 
 
 def run_sniper_gdb(bench):
@@ -586,6 +626,8 @@ def run_sniper_gdb(bench):
         sim_results_dir = os.path.join(sim_results_dir_root, r['name'])
         os.makedirs(sim_results_dir)
         
+        if 'pre-cmd' in benches[bench]:
+            os.system(benches[bench]['pre-cmd'])
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
         if r['name'] == 'roi':
             sniper_exe = sniper_command_roi_gdb % {**locals(), **config}
@@ -598,6 +640,9 @@ def run_sniper_gdb(bench):
             sniper_exe = sniper_exe.replace('-gscheduler/type=static', '-gscheduler/type='+benches[bench]['scheduler'])
         if 'ff-mode' in benches[bench]:
             sniper_exe = sniper_exe.replace('-ggeneral/inst_mode_init=fast_forward', '-ggeneral/inst_mode_init='+benches[bench]['ff-mode'])
+        if 'ff-model' in benches[bench]:
+            print("WARINING : ff-model is set to " + benches[bench]['ff-model'])
+            sniper_exe = sniper_exe.replace('-gperf_model/fast_forward/model=oneipc', '-gperf_model/fast_forward/model='+benches[bench]['ff-model'])
         print(sniper_exe)
         os.system(sniper_exe)
         
@@ -607,6 +652,8 @@ def run_sniper_gdb(bench):
         os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
+        if 'post-cmd' in benches[bench]:
+            os.system(benches[bench]['post-cmd'])
     os.system('rm -rf %(sim_results_dir_root)s' % {**locals(), **config})
         
 def run_region(bench):
@@ -628,6 +675,8 @@ def run_region(bench):
         if config['regions'] and r['name'] not in config['regions']:
             continue
         print("///// REGION: " + r['name'] + " /////")
+        if 'pre-cmd' in benches[bench]:
+            os.system(benches[bench]['pre-cmd'])
         ff_icount = r['ff_icount']
         warmup_icount = r['warmup_icount']
         sim_icount = r['sim_icount']
@@ -636,6 +685,8 @@ def run_region(bench):
         print(region_command % {**locals(), **config})
         os.system(region_command % {**locals(), **config})
         os.system('mv foo.event_icount* %s' % results_dir)
+        if 'post-cmd' in benches[bench]:
+            os.system(benches[bench]['post-cmd'])
         
 def run_roi_icount(bench):
     print("******************* Running roi icount " + bench + "************************")
@@ -646,15 +697,23 @@ def run_roi_icount(bench):
     if os.path.exists(results_dir):
         os.system('rm -rf %s' % results_dir)
     os.makedirs(results_dir)
+    if 'pre-cmd' in benches[bench]:
+        os.system(benches[bench]['pre-cmd'])
     exe_command = benches[bench]['cmd'] % config
     pinplay_log = os.path.join(results_dir, 'roi')
     print(roi_icount_command % {**locals(), **config})
     os.system(roi_icount_command % {**locals(), **config})
     os.system('mv foo.event_icount* %s' % results_dir)
+    if 'post-cmd' in benches[bench]:
+        os.system(benches[bench]['post-cmd'])
     
 def run_memtier(bench, load, test):
-    print("******************* Running memtier for" + bench + "************************")
-    os.chdir(memtier_path)
+    print("******************* Running workload for" + bench + "************************")
+    if 'wl_path' in benches[bench]:
+        os.chdir(benches[bench]['wl_path'])
+        os.system('pwd')
+    else:
+        os.chdir(memtier_path)
     if (load):
         print("LOADING......................................")
         os.system(benches[bench]['loading_cmd'] % config)
@@ -675,14 +734,14 @@ for bench in test_set:
             config['app_threads'] = config['ncores'] - benches[bench]['extra-threads']
         else: 
             config['nthreads'] += benches[bench]['extra-threads']
-    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else redis_bench_path if bench in redis_set else memcached_bench_path if bench in memcached_set else llama2_bench_path
+    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else redis_bench_path if bench in redis_set else memcached_bench_path if bench in memcached_set else mysql_path if bench in mysql_set else llama2_bench_path
     if (argv == 'native'):
         run_native(bench)
     if (argv == 'region'):
         run_region(bench)
     if (argv == 'icount'):
         run_roi_icount(bench)
-    if (argv == 'memtier'):
+    if (argv == 'wl'):
         memtier_load = False
         memtier_test = False
         for arg in args.memtier_mode:
