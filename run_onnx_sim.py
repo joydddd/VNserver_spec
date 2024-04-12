@@ -8,7 +8,7 @@ onnx_set = ['3dunet', 'resnet']
 genome_set = ['fmi', 'fmi-l', 'bsw', 'bsw-l', 'dbg', 'dbg-s', 'chain', 'chain-m', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s', 'bsw-s']
 graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', 'sssp-twitter', 'bfs-kron', 'bfs-web', 'bfs-road', 'bfs-twitter', 'bc', 'cc', 'cc_sv', 'tc']
 llama_set = ['llama-8', 'llama-5']
-redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p']
+redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p', 'redis-5kw-1']
 memcached_set = ['memcached-test', 'memcached-1', 'memcached-2']
 mysql_set = ['mysql-test']
 
@@ -34,13 +34,14 @@ config['port'] = 11221
 arch_list = ['zen4_no_dramsim']
 # arch_list = ['zen4_cxl_invisimem']
 
-config['ncores'] = 32
+# config['ncores'] = 32
 
 
 # arch_list = ['zen4_cxl_11']
 # arch_list = ['zen4_no_dramsim_11']
 # arch_list = ['zen4_vn_11', 'zen4_no_freshness_11']
-# config['ncores'] = 11
+arch_list = ['zen4_invisimem_11']
+config['ncores'] = 11
 
 
 # config['arch'] = 'coaxial_s'
@@ -63,6 +64,7 @@ arch_ncores = {
     'zen4_vn_11'        : 11,
     'zen4_no_freshness_11': 11,
     'zen4_no_dramsim_11': 11,
+    'zen4_invisimem_11' : 11,
     'coaxial_s'         : 12,
     'icelake_s'         : 10,
     'icelake_cxl'       : 10,
@@ -446,6 +448,8 @@ benches['redis-5kw'] = {
     'workload_cmd': './memtier_benchmark --ratio=1:0 -R -t 4 -c 50 --requests=5000 --key-pattern=G:G  --key-maximum=100000000 --wait-for-server-load --port %(port)s' , ## workload generation command 
 }
 
+benches['redis-5kw-1'] = benches['redis-5kw'] # to run multiple redis in parallel. 
+
 
 # benches['redis-multi-p'] = {
 #     'cmd' : '../../src/redis-server --multi-service 2'
@@ -467,7 +471,7 @@ benches['memcached-test'] = {
     'regions':  [
                 {'name': 'rs1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
                 {'name': 'rs2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M100*32/5, 'ncores': 32 },
-                {'name': 'rs3-t32', 'ff_icount' : 0, 'warmup_icount' : M10*32, 'sim_icount' : M10, 'ncores': 32 },
+                {'name': 'rs3-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M10*32, 'sim_icount' : M10, 'ncores': 32 },
                 {'name': 'r1-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 {'name': 'r2-t32', 'ff_icount' : 19266894630, 'warmup_icount' : M100*32, 'sim_icount' : G10*32, 'ncores': 32 },
                 # {'name': 'roi', 'ncores': 32 }
@@ -716,9 +720,11 @@ def run_memtier(bench, load, test):
         os.chdir(memtier_path)
     if (load):
         print("LOADING......................................")
+        print("cmd:" + benches[bench]['loading_cmd'] % config)
         os.system(benches[bench]['loading_cmd'] % config)
     if (test):
         print("TESTING......................................")
+        print("cmd:" + benches[bench]['workload_cmd'] % config)
         os.system(benches[bench]['workload_cmd'] % config)
         
         
@@ -752,7 +758,6 @@ for bench in test_set:
         run_memtier(bench, memtier_load, memtier_test)
     for arch in arch_list:
         config['arch'] = arch
-        config['ncores'] = arch_ncores[arch]
         print("Arch: " + arch)
         if (argv == 'sniper'):
             run_sniper(bench)
