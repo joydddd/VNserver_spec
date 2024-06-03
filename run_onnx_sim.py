@@ -10,20 +10,21 @@ graph_set = ['pr', 'pr-kron', 'pr-kron-s','pr-kron-2', 'pr_spmv', 'sssp-road', '
 llama_set = ['llama-8', 'llama-5']
 redis_set = ['redis-test', 'redis-5k', 'redis-5kw', 'redis-multi-p', 'redis-5kw-1']
 memcached_set = ['memcached-test', 'memcached-1', 'memcached-2']
-mysql_set = ['mysql-test']
+mysql_set = ['mysql-test', 'mysql-1']
+hyrise_set = ['hyrise', 'hyrise-1', 'hyrise-2']
 
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
 submission_set = ['bsw', 'fmi', 'chain', 'dbg-s', 'pileup-s', 'pr-kron', 'bfs-twitter', 'sssp-road', 'llama5']
 
-test_set = ['memcached-2']
+test_set = sim_test
 
 
 config = {}
 # config['simulator'] = 'vnsniper'
-config['simulator'] = 'sniper'
+config['simulator'] = 'sniper-toleo'
 config['regions'] = None;
 config['abort_after_roi'] = ''
-config['port'] = 11221
+config['port'] = 9856
 config['stats_period'] = 1000000
 
 
@@ -31,19 +32,19 @@ config['stats_period'] = 1000000
 
 # arch_list = ['zen4_s']
 # arch_list = ['zen4_cxl']
-# arch_list = ['zen4_vn']
+arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
-arch_list = ['zen4_no_dramsim']
+# arch_list = ['zen4_no_dramsim']
 # arch_list = ['zen4_cxl_invisimem']
 
-# config['ncores'] = 32
+config['ncores'] = 32
 
 
 # arch_list = ['zen4_cxl_11']
 # arch_list = ['zen4_no_dramsim_11']
 # arch_list = ['zen4_vn_11', 'zen4_no_freshness_11']
-arch_list = ['zen4_invisimem_11']
-config['ncores'] = 11
+# arch_list = ['zen4_invisimem_11']
+# config['ncores'] = 11
 
 
 # config['arch'] = 'coaxial_s'
@@ -492,20 +493,46 @@ benches['memcached-3'] = benches['memcached-test'] # for running multiple memcac
 
 
 benches['mysql-test'] = {
-    'pre-cmd': 'cp -R ../../data_backup ./data',
-    'cmd' : '../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf -P %(port)s',
-    'post-cmd': 'rm -rf ./data',
-    # 'cmd': ../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf -P %(port)s --initialize-insecure ##Create Server
-    'scheduler' : 'static',
+    # 'pre-cmd': '../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf -P %(port)s --initialize-insecure',
+    'pre-cmd': 'rm -rf ../../data; cp -r ../../data_100 ../../data',
+    'cmd' : '../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf --port %(port)s --skip-mysqlx --debug',
+    # 'post-cmd': 'rm  -rf ./data',
+    # 'cmd': '../../usr/local/mysql/bin/mysqld --defaults-file=./my.cnf -P %(port)s --initialize-insecure', ##Create Server
     'regions':  [
+                {'name': 'rs1-t32', 'ff_icount' : 0, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32 },
+                {'name': 'r1-t32', 'ff_icount' : 0, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
                 ],
-    'extra-threads': 6, # maintenaince, crawler, lru_maintainer, logger, rebalance
+    'extra-threads': 50, # maintenaince, crawler, lru_maintainer, logger, rebalance
     'wl_path': '%s/mysql/tpcc-mysql' % SPEC_ROOT,
+    'scheduler' : 'pinned',
+    'ff-model': 'none', 
     
-    # 'loading_cmd': '../usr/local/mysql/bin/mysql -u root -P %(port)s create tpcc1000; ../usr/local/mysql/bin/mysql -u root -P %(port)s tpcc1000 < create_table.sql; ../usr/local/mysql/bin/mysql -u root -P %(port)s tpcc1000 < add_fkey_idx.sql;',  # Create tables
-    'loading_cmd': 'export LD_LIBRARY_PATH=$SPEC_ROOT/mysql/usr/local/mysql/lib:$LD_LIBRARY_PATH; ./tpcc_load -h127.0.0.1 -d tpcc1000 -u root -P %(port)s -p "" -w 1000',
-    'workload_cmd': 'export LD_LIBRARY_PATH=$SPEC_ROOT/mysql/usr/local/mysql/lib:$LD_LIBRARY_PATH; ./tpcc-mysql/tpcc_start -h127.0.0.1 -dtpcc1000 -uroot -P %(port)s -p "" -w1000 -c32 -r10 -l1200'
+
+    'loading_cmd': '../usr/local/mysql/bin/mysqladmin -P %(port)s -u root create tpcc100; ../usr/local/mysql/bin/mysql -u root -P %(port)s tpcc100 < create_table.sql; ../usr/local/mysql/bin/mysql -u root -P %(port)s tpcc100 < add_fkey_idx.sql;',  # Create tables
+    'loading_cmd': 'export LD_LIBRARY_PATH=$SPEC_ROOT/mysql/usr/local/mysql/lib:$LD_LIBRARY_PATH; ./load.sh tpcc100 100 %(port)s',
+    # 'loading_cmd': ' ../usr/local/mysql/bin/mysqldump --all-databases -u root  > ../dump.sql', # export database to sql
+    'loading_cmd': '../usr/local/mysql/bin/mysqladmin -u root --password="" shutdown -P %(port)s', # export database to sql
+    'workload_cmd': 'export LD_LIBRARY_PATH=$SPEC_ROOT/mysql/usr/local/mysql/lib:$LD_LIBRARY_PATH; export PATH=$SPEC_ROOT/mysql/usr/local/mysql/bin:$PATH; ./tpcc_start -h127.0.0.1 -dtpcc100 -uroot -P %(port)s -p "" -w100 -c32 -r0 -l0 -q400 -#100'
 }
+
+benches['mysql-1'] = benches['mysql-test'].copy() # for running multiple mysql at the same time
+benches['mysql-1']['pre-cmd'] = 'rm -rf ../../data-1; cp -r ../../data_100 ../../data-1'
+
+benches['hyrise'] = {
+     'cmd' : '../../build/hyriseBenchmarkTPCC -s 10 --clients 30 --cores 30 -w 100000000000 --scheduler --time 100000000000 -r 10000 --warmup-runs 200 --data_preparation_cores 30',  
+    'ff-model': 'none', 
+    'scheduler' : 'pinned',
+    'regions':  [
+                {'name': 'r1-t32', 'ff_icount' : 0, 'warmup_icount' : M100*32, 'sim_icount' : G1*32, 'ncores': 32 },
+                {'name': 'rs1-t32', 'ff_icount' : 0, 'warmup_icount' : M10*32, 'sim_icount' : M100*32, 'ncores': 32  },
+                {'name': 'roi', 'ncores': 32 }
+                ],
+    'extra-threads': 100, # maintenaince, crawler, lru_maintainer, logger, rebalance
+}
+
+benches['hyrise-1'] = benches['hyrise'].copy()
+benches['hyrise-2'] = benches['hyrise'].copy()
+# benches['hyrise-2']['cmd'] = '../../build/hyriseConsole tpch.sql'
 
 ###################### Sniper Commands ######################
 sniper_command = '$SNIPER_ROOT/run-sniper       -n %(ncores)s     -v -sprogresstrace:10000000 -speriodic-stats:%(stats_period)s:2000 -gtraceinput/timeout=2000 -gscheduler/type=static -gscheduler/pinned/quantum=10000 -c%(arch)s --no-cache-warming -ssimuserwarmup%(abort_after_roi)s --roi-script --trace-args="-pinplay:control precond:address:pin_hook_init,warmup-start:icount:%(ff_icount)d:global,start:icount:%(warmup_icount)d:global,stop:icount:%(sim_icount)d:global"  --trace-args="-pinplay:controller_log 1"  --trace-args="-pinplay:controller_olog %(sim_results_dir)s/pinplay_controller.log" -ggeneral/inst_mode_init=fast_forward -gperf_model/fast_forward/model=oneipc -gperf_model/fast_forward/oneipc/include_memory_latency=false -d %(sim_results_dir)s -- "%(exe_command)s" 2>&1 | tee %(sim_results_dir)s/sniper.out'
@@ -539,6 +566,7 @@ redis_bench_path = os.path.join(SPEC_ROOT, 'redis/run')
 memcached_bench_path = os.path.join(SPEC_ROOT, 'memcached/run')
 memtier_path = os.path.join(SPEC_ROOT, 'memtier_benchmark')
 mysql_path = os.path.join(SPEC_ROOT, 'mysql/run')
+hyrise_path = os.path.join(SPEC_ROOT, 'hyrise/run')
 
 
 def run_native(bench):
@@ -550,12 +578,13 @@ def run_native(bench):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     if 'pre-cmd' in benches[bench]:
-        os.system(benches[bench]['pre-cmd'])
+        print('[PRE-CMD]' + benches[bench]['pre-cmd'] % {**locals(), **config})
+        os.system(benches[bench]['pre-cmd'] % {**locals(), **config})
     exe_command = benches[bench]['cmd'] % config
     print(native_commamd % {**locals(), **config})
     os.system(native_commamd % {**locals(), **config})
     if 'post-cmd' in benches[bench]:
-        os.system(benches[bench]['post-cmd'])
+        os.system(benches[bench]['post-cmd'] % {**locals(), **config})
         
 def run_sniper(bench):
     print("******************* Running sniper " + bench + "************************")
@@ -581,7 +610,8 @@ def run_sniper(bench):
         os.makedirs(sim_results_dir)
         
         if 'pre-cmd' in benches[bench]:
-            os.system(benches[bench]['pre-cmd'])
+            print('[PRE-CMD]' + benches[bench]['pre-cmd'] % {**locals(), **config})
+            os.system(benches[bench]['pre-cmd'] % {**locals(), **config})
         
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
         if r['name'] == 'roi':
@@ -607,7 +637,7 @@ def run_sniper(bench):
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
         if 'post-cmd' in benches[bench]:
-            os.system(benches[bench]['post-cmd'])
+            os.system(benches[bench]['post-cmd'] % {**locals(), **config})
 
 
 def run_sniper_gdb(bench):
@@ -634,7 +664,8 @@ def run_sniper_gdb(bench):
         os.makedirs(sim_results_dir)
         
         if 'pre-cmd' in benches[bench]:
-            os.system(benches[bench]['pre-cmd'])
+            print('[PRE-CMD]' + benches[bench]['pre-cmd'] % {**locals(), **config})
+            os.system(benches[bench]['pre-cmd'] % {**locals(), **config})
         print("[OUTPUT] writing to dir " + sim_results_dir_root)
         if r['name'] == 'roi':
             sniper_exe = sniper_command_roi_gdb % {**locals(), **config}
@@ -660,7 +691,7 @@ def run_sniper_gdb(bench):
         os.system('mv dramsim** %(sim_results_dir)s' % {**locals(), **config})
         os.system('mv *.csv %(sim_results_dir)s' % {**locals(), **config})
         if 'post-cmd' in benches[bench]:
-            os.system(benches[bench]['post-cmd'])
+            os.system(benches[bench]['post-cmd'] % {**locals(), **config})
     os.system('rm -rf %(sim_results_dir_root)s' % {**locals(), **config})
         
 def run_region(bench):
@@ -683,7 +714,7 @@ def run_region(bench):
             continue
         print("///// REGION: " + r['name'] + " /////")
         if 'pre-cmd' in benches[bench]:
-            os.system(benches[bench]['pre-cmd'])
+            os.system(benches[bench]['pre-cmd'] % {**locals(), **config})
         ff_icount = r['ff_icount']
         warmup_icount = r['warmup_icount']
         sim_icount = r['sim_icount']
@@ -693,7 +724,7 @@ def run_region(bench):
         os.system(region_command % {**locals(), **config})
         os.system('mv foo.event_icount* %s' % results_dir)
         if 'post-cmd' in benches[bench]:
-            os.system(benches[bench]['post-cmd'])
+            os.system(benches[bench]['post-cmd'] % {**locals(), **config})
         
 def run_roi_icount(bench):
     print("******************* Running roi icount " + bench + "************************")
@@ -705,14 +736,14 @@ def run_roi_icount(bench):
         os.system('rm -rf %s' % results_dir)
     os.makedirs(results_dir)
     if 'pre-cmd' in benches[bench]:
-        os.system(benches[bench]['pre-cmd'])
+        os.system(benches[bench]['pre-cmd'] % {**locals(), **config})
     exe_command = benches[bench]['cmd'] % config
     pinplay_log = os.path.join(results_dir, 'roi')
     print(roi_icount_command % {**locals(), **config})
     os.system(roi_icount_command % {**locals(), **config})
     os.system('mv foo.event_icount* %s' % results_dir)
     if 'post-cmd' in benches[bench]:
-        os.system(benches[bench]['post-cmd'])
+        os.system(benches[bench]['post-cmd'] % {**locals(), **config})
     
 def run_memtier(bench, load, test):
     print("******************* Running workload for" + bench + "************************")
@@ -745,7 +776,7 @@ for bench in test_set:
             config['app_threads'] = config['ncores'] - benches[bench]['extra-threads']
         else: 
             config['nthreads'] += benches[bench]['extra-threads']
-    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else redis_bench_path if bench in redis_set else memcached_bench_path if bench in memcached_set else mysql_path if bench in mysql_set else llama2_bench_path
+    config['bench_path'] = onnx_model_path if bench in onnx_set else genom_bench_path if bench in genome_set else gapbs_bench_path if bench in graph_set else redis_bench_path if bench in redis_set else memcached_bench_path if bench in memcached_set else mysql_path if bench in mysql_set else hyrise_path if bench in hyrise_set else llama2_bench_path
     if (argv == 'native'):
         run_native(bench)
     if (argv == 'region'):
