@@ -16,8 +16,12 @@ hyrise_set = ['hyrise', 'hyrise-1', 'hyrise-2']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
 submission_set = ['bsw', 'fmi', 'chain', 'dbg-s', 'pileup-s', 'pr-kron', 'bfs-twitter', 'sssp-road', 'llama5']
 
-test_set = sim_test
+genomics_bench = ['fmi', 'bsw', 'bsw-s', 'dbg', 'dbg-s', 'chain', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s']
+gapbs_bench = ['pr-kron-s', 'pr-kron', 'sssp-road', 'bfs-twitter']
+llama2_bench = ['llama-8', 'llama-5']
+db_bench = ['hyrise', 'mysql-test', 'memcached-test']
 
+test_set = sim_test
 
 config = {}
 # config['simulator'] = 'vnsniper'
@@ -31,12 +35,13 @@ config['stats_period'] = 1000000
 
 
 # arch_list = ['zen4_s']
-# arch_list = ['zen4_cxl']
-arch_list = ['zen4_vn']
+arch_list = ['zen4_cxl']
+# arch_list = ['zen4_vn']
 # arch_list = ['zen4_no_freshness']
 # arch_list = ['zen4_no_dramsim']
 # arch_list = ['zen4_cxl_invisimem']
 
+# arch_list = ['zen4_cxl', 'zen4_vn', 'zen4_no_freshness', 'zen4_cxl_invisimem']
 config['ncores'] = 32
 
 
@@ -84,24 +89,47 @@ M10 = (M1 * 10) # 10 million
 
 import argparse
 
-parser = argparse.ArgumentParser(description='Run benchmarks')
-parser.add_argument('mode', type=str, help='Mode to run the benchmarks. Options: native, region, icount, memtier')
+parser = argparse.ArgumentParser(description='Run Toleo Simulation')
+parser.add_argument('mode', type=str, help='Mode to run the benchmarks. Options: native, region, icount, sniper, memtier')
 parser.add_argument('memtier_mode', type=str, nargs='*', help='Mode to run the benchmarks. Options: load, test')
-parser.add_argument('--bench', type=str, nargs='*', help='Benchmarks to run. Options: all, kmer-cnt-s, pileup, pileup-s, pr, pr-kron, pr-kron-s, pr_spmv, bfs-web, bfs-kron, bfs-road, bfs-twitter, sssp-road, sssp-twitter, bc, cc, cc_sv, tc, llama-8, llama-5, redis-test, redis-5k, redis-5kw, redis-multi-p, memcached-test')
-parser.add_argument('--sim', type=str, help='Simulator to run the benchmarks. Options: sniper, vnsniper')
-parser.add_argument('--arch', type=str, nargs='*', help='Architecture to run the benchmarks. Options: zen4_s, zen4_cxl, zen4_vn, zen4_no_dramsim, etc.')
+parser.add_argument('--bench', type=str, nargs='*', help='Benchmarks to run. Options: all, genomicsbench, sim_test or <test name>. run --print-bench to print all available test cases')
+parser.add_argument('--print-bench', type=str, nargs='*')
+parser.add_argument('--sim', type=str, help='Simulator to run the benchmarks. --sim <simulator name> (default sniper-toleo)')
+parser.add_argument('--arch', type=str, nargs='*', help='Architecture to run the benchmarks. Options: zen4_cxl, zen4_vn, zen4_no_freshness, zen4_cxl_invisimem etc.')
 parser.add_argument('-r','--region', type=str, nargs='*', help='Regions to run the benchmarks. Options: r1, r2, rs1-t32, etc.')
 parser.add_argument('-a', '--abort_after_roi', action='store_true', help='Abort after ROI')
 parser.add_argument('-p', '--port', type=int, help='Port number for db workloads')
 
 
-args = parser.parse_args()
 
+args = parser.parse_args()
+if args.print_bench:
+    print("genomicsbench: ", genomics_bench)
+    print("graphbench: ", gapbs_bench)
+    print("llama2bench: ", llama2_bench)
+    print("dbbench: ", db_bench)
+    print("(default) sim_test -- Small tests cases meant for simulator debugging", sim_test)
+    exit(0)
 if args.bench:
     test_set = args.bench
     if "sim_test" in test_set:
         test_set.remove("sim_test")
         test_set.extend(sim_test)
+    if "genomicsbench" in test_set:
+        test_set.remove("genomicsbench")
+        test_set.extend(genomics_bench)
+    if "graphbench" in test_set:
+        test_set.remove("graphbench")
+        test_set.extend(gapbs_bench)
+    if "llama2bench" in test_set:
+        test_set.remove("llama2bench")
+        test_set.extend(llama2_bench)
+    if "dbbench" in test_set:
+        test_set.remove("dbbench")
+        test_set.extend(db_bench)
+    if "all" in test_set:
+        test_set.remove("all")
+        test_set.extend(genomics_bench + gapbs_bench + llama2_bench + db_bench)
 if args.arch:
     arch_list = args.arch
     config['ncores'] = arch_ncores[args.arch[0]]
@@ -592,6 +620,7 @@ def run_sniper(bench):
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     sim_results_dir_root = 'sim-{date:%Y-%m-%d_%H:%M:%S}'.format( date=datetime.datetime.now() )
+    sim_results_dir_root += config['arch']
     print("Simulation name: " + sim_results_dir_root)
     sim_results_dir_root = os.path.join(bench_path, sim_results_dir_root)
     os.makedirs(sim_results_dir_root)
@@ -646,6 +675,7 @@ def run_sniper_gdb(bench):
     bench_path = os.path.join(path, bench)
     os.chdir(bench_path)
     sim_results_dir_root = 'sim-{date:%Y-%m-%d_%H:%M:%S}'.format( date=datetime.datetime.now() )
+    sim_results_dir_root += config['arch']
     print("Simulation name: " + sim_results_dir_root)
     sim_results_dir_root = os.path.join(bench_path, sim_results_dir_root)
     os.makedirs(sim_results_dir_root)
