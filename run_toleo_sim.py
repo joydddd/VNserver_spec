@@ -16,7 +16,7 @@ hyrise_set = ['hyrise', 'hyrise-1', 'hyrise-2']
 sim_test = ['bsw-s', 'pr-kron-s'] # small test cases for testing simulators
 submission_set = ['bsw', 'fmi', 'chain', 'dbg-s', 'pileup-s', 'pr-kron', 'bfs-twitter', 'sssp-road', 'llama5']
 
-genomics_bench = ['fmi', 'bsw', 'bsw-s', 'dbg', 'dbg-s', 'chain', 'kmer-cnt', 'kmer-cnt-s', 'pileup', 'pileup-s']
+genomics_bench = ['fmi', 'bsw', 'bsw-s', 'dbg-s', 'chain', 'pileup-s']
 gapbs_bench = ['pr-kron-s', 'pr-kron', 'sssp-road', 'bfs-twitter']
 llama2_bench = ['llama-8', 'llama-5']
 db_bench = ['hyrise', 'mysql-test', 'memcached-test']
@@ -92,8 +92,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Run Toleo Simulation')
 parser.add_argument('mode', type=str, help='Mode to run the benchmarks. Options: native, region, icount, sniper, memtier')
 parser.add_argument('memtier_mode', type=str, nargs='*', help='Mode to run the benchmarks. Options: load, test')
-parser.add_argument('--bench', type=str, nargs='*', help='Benchmarks to run. Options: all, genomicsbench, sim_test or <test name>. run --print-bench to print all available test cases')
-parser.add_argument('--print-bench', type=str, nargs='*')
+parser.add_argument('--bench', type=str, nargs='*', help='Benchmarks to run. Options: all, genomicsbench, sim_test or <test name>. run ./run_toleo_sim.py print-bench to print all available test cases')
 parser.add_argument('--sim', type=str, help='Simulator to run the benchmarks. --sim <simulator name> (default sniper-toleo)')
 parser.add_argument('--arch', type=str, nargs='*', help='Architecture to run the benchmarks. Options: zen4_cxl, zen4_vn, zen4_no_freshness, zen4_cxl_invisimem etc.')
 parser.add_argument('-r','--region', type=str, nargs='*', help='Regions to run the benchmarks. Options: r1, r2, rs1-t32, etc.')
@@ -103,7 +102,7 @@ parser.add_argument('-p', '--port', type=int, help='Port number for db workloads
 
 
 args = parser.parse_args()
-if args.print_bench:
+if args.mode == "print-bench":
     print("genomicsbench: ", genomics_bench)
     print("graphbench: ", gapbs_bench)
     print("llama2bench: ", llama2_bench)
@@ -141,10 +140,6 @@ if args.abort_after_roi:
     config['abort_after_roi'] = ':abort'
 if args.port:
     config['port'] = args.port
-
-print(config)
-print(test_set)
-print(arch_list)
 
 ################################### Overwrite from cmd arguments ###################################
 
